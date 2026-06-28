@@ -2,6 +2,7 @@ package moe.lukoa.launcher
 
 import android.os.SystemClock
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -62,38 +63,47 @@ fun LauncherBottomBar(
     selectedTab: LauncherTab,
     onSelectTab: (LauncherTab) -> Unit,
 ) {
-    NavigationBar(
-        containerColor = LukoaColors.Surface,
-        contentColor = LukoaColors.Text,
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(1.dp, LukoaColors.Line, RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp)),
+        color = LukoaColors.Surface,
+        shape = RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp),
     ) {
-        LauncherTab.entries.forEach { tab ->
-            NavigationBarItem(
-                selected = selectedTab == tab,
-                onClick = { onSelectTab(tab) },
-                icon = {
-                    Text(
-                        text = tab.shortLabel,
-                        fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.labelLarge,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                },
-                label = {
-                    Text(
-                        text = tab.label,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                },
-                colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = LukoaColors.Accent,
-                    selectedTextColor = LukoaColors.Accent,
-                    indicatorColor = LukoaColors.SurfaceAlt,
-                    unselectedIconColor = LukoaColors.Muted,
-                    unselectedTextColor = LukoaColors.Muted,
-                ),
-            )
+        NavigationBar(
+            containerColor = LukoaColors.Surface,
+            contentColor = LukoaColors.Text,
+        ) {
+            LauncherTab.entries.forEach { tab ->
+                NavigationBarItem(
+                    selected = selectedTab == tab,
+                    onClick = { onSelectTab(tab) },
+                    icon = {
+                        Text(
+                            text = tab.shortLabel,
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.labelLarge,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    },
+                    label = {
+                        Text(
+                            text = tab.label,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            fontWeight = if (selectedTab == tab) FontWeight.SemiBold else FontWeight.Normal,
+                        )
+                    },
+                    colors = NavigationBarItemDefaults.colors(
+                        selectedIconColor = LukoaColors.Text,
+                        selectedTextColor = LukoaColors.Text,
+                        indicatorColor = LukoaColors.AccentSoft,
+                        unselectedIconColor = LukoaColors.Muted,
+                        unselectedTextColor = LukoaColors.Muted,
+                    ),
+                )
+            }
         }
     }
 }
@@ -730,7 +740,15 @@ fun VersionManagementSection(
         actionState.rollbackDisabledReason?.let { "回退：$it" },
     ).distinct()
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        SectionPanel(title = "当前酒馆版本", accentColor = LukoaColors.Accent) {
+        VersionOverviewCard(
+            tavernVersionInfo = tavernVersionInfo,
+            selectedVersion = selectedVersion,
+            officialVersions = officialVersions,
+            actionsLocked = actionsLocked,
+            onRefreshCurrentVersion = onTavernVersion,
+        )
+
+        SectionPanel(title = "当前安装信息", accentColor = LukoaColors.Accent) {
             Text(
                 text = tavernVersionInfo.displayVersion,
                 color = when {
@@ -781,17 +799,9 @@ fun VersionManagementSection(
                     style = MaterialTheme.typography.bodySmall,
                 )
             }
-
-            SecondaryActionButton(
-                text = "重新检测酒馆版本",
-                enabled = !actionsLocked,
-                accentColor = LukoaColors.Accent,
-                modifier = Modifier.fillMaxWidth(),
-                onClick = onTavernVersion,
-            )
         }
 
-        SectionPanel(title = "目标版本", accentColor = LukoaColors.Accent) {
+        SectionPanel(title = "目标版本与切换", accentColor = LukoaColors.Accent) {
             Text(
                 text = when {
                     tavernVersionInfo.hasData -> "先读取列表，再选目标版本。"
@@ -854,6 +864,124 @@ fun VersionManagementSection(
                 },
                 color = LukoaColors.Muted,
                 style = MaterialTheme.typography.bodySmall,
+            )
+        }
+    }
+}
+
+@Composable
+private fun VersionOverviewCard(
+    tavernVersionInfo: TavernVersionInfo,
+    selectedVersion: TavernVersionChoice?,
+    officialVersions: TavernOfficialVersions,
+    actionsLocked: Boolean,
+    onRefreshCurrentVersion: () -> Unit,
+) {
+    val statusText: String
+    val statusColor: Color
+    when {
+        tavernVersionInfo.hasLocalChanges -> {
+            statusText = "有本地改动"
+            statusColor = LukoaColors.Danger
+        }
+        tavernVersionInfo.hasData -> {
+            statusText = "已读取当前版本"
+            statusColor = LukoaColors.Accent
+        }
+        tavernVersionInfo.notInstalled -> {
+            statusText = "未安装酒馆"
+            statusColor = LukoaColors.Amber
+        }
+        else -> {
+            statusText = "等待检测"
+            statusColor = LukoaColors.Muted
+        }
+    }
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = LukoaColors.Surface,
+        shape = RoundedCornerShape(8.dp),
+    ) {
+        Column(
+            modifier = Modifier
+                .border(1.dp, LukoaColors.Line, RoundedCornerShape(8.dp))
+                .padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "版本总览",
+                    color = LukoaColors.Text,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Surface(
+                    color = statusColor.copy(alpha = 0.14f),
+                    shape = LukoaCapsuleShape,
+                    border = BorderStroke(1.dp, statusColor.copy(alpha = 0.38f)),
+                ) {
+                    Text(
+                        text = statusText,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                        color = statusColor,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
+            }
+            Text(
+                text = if (tavernVersionInfo.hasData) {
+                    "这里先看当前安装信息，再决定更新还是回退。"
+                } else if (tavernVersionInfo.notInstalled) {
+                    "还没检测到酒馆安装，可以先读官方版本，确认后再去安装。"
+                } else {
+                    "先检测当前酒馆版本，再选目标版本会更清楚。"
+                },
+                color = LukoaColors.Muted,
+                style = MaterialTheme.typography.bodySmall,
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                VersionStatusValueCard(
+                    label = "当前版本",
+                    value = tavernVersionInfo.displayVersion,
+                    accentColor = when {
+                        tavernVersionInfo.hasData -> LukoaColors.Text
+                        tavernVersionInfo.notInstalled -> LukoaColors.Amber
+                        else -> LukoaColors.Muted
+                    },
+                    modifier = Modifier.weight(1f),
+                )
+                VersionStatusValueCard(
+                    label = "目标版本",
+                    value = selectedVersion?.label ?: "未选择",
+                    accentColor = if (selectedVersion == null) LukoaColors.Muted else LukoaColors.Accent,
+                    modifier = Modifier.weight(1f),
+                )
+                VersionStatusValueCard(
+                    label = "官方版本",
+                    value = if (officialVersions.hasData) {
+                        "${officialVersions.stable.size} 稳 / ${officialVersions.test.size} 测"
+                    } else {
+                        "未读取"
+                    },
+                    accentColor = if (officialVersions.hasData) LukoaColors.Info else LukoaColors.Muted,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+            SecondaryActionButton(
+                text = "重新检测酒馆版本",
+                enabled = !actionsLocked,
+                accentColor = LukoaColors.Accent,
+                modifier = Modifier.fillMaxWidth(),
+                onClick = onRefreshCurrentVersion,
             )
         }
     }
@@ -2101,7 +2229,14 @@ fun SettingsSection(
     val updateLocked = githubUpdateState.checking || githubUpdateState.downloading
     val tavernPathError = TavernPathValidator.validate(tavernPathInput.trim())
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        SectionPanel(title = "酒馆目录", accentColor = LukoaColors.Accent) {
+        SettingsOverviewCard(
+            tavernPathConfig = tavernPathConfig,
+            mirrorProbeStatus = mirrorProbeStatus,
+            backgroundRunPermissionGranted = backgroundRunPermissionGranted,
+            githubUpdateState = githubUpdateState,
+        )
+
+        SectionPanel(title = "酒馆路径", accentColor = LukoaColors.Accent) {
             Text(
                 text = tavernPathConfig.displayTavernDir,
                 color = LukoaColors.Text,
@@ -2187,30 +2322,12 @@ fun SettingsSection(
             onApplyCustomTermuxMirror = onApplyCustomTermuxMirror,
         )
 
-        SectionPanel(title = "后台运行", accentColor = LukoaColors.Accent) {
-            StatusPill(
-                text = if (backgroundRunPermissionGranted) "后台运行已允许" else "后台运行未允许",
-                active = backgroundRunPermissionGranted,
-            )
+        SectionPanel(title = "应用更新", accentColor = LukoaColors.Accent) {
             Text(
-                text = if (backgroundRunPermissionGranted) {
-                    "自动备份到点后会继续在后台尝试执行。"
-                } else {
-                    "如果这里没放行，自动备份可能要回到软件才会执行。"
-                },
+                text = "这里管理的是启动器更新，不是酒馆版本更新。",
                 color = LukoaColors.Muted,
                 style = MaterialTheme.typography.bodySmall,
             )
-            SecondaryActionButton(
-                text = if (backgroundRunPermissionGranted) "重新打开权限页" else "去授权",
-                enabled = !actionsLocked,
-                accentColor = LukoaColors.Accent,
-                modifier = Modifier.fillMaxWidth(),
-                onClick = onRequestBackgroundRunPermission,
-            )
-        }
-
-        SectionPanel(title = "更新设置", accentColor = LukoaColors.Amber) {
             GithubUpdateStatusCard(githubUpdateState)
 
             OutlinedTextField(
@@ -2298,7 +2415,30 @@ fun SettingsSection(
             }
         }
 
-        SectionPanel(title = "日志设置", accentColor = LukoaColors.Accent) {
+        SectionPanel(title = "后台权限", accentColor = LukoaColors.Accent) {
+            StatusPill(
+                text = if (backgroundRunPermissionGranted) "后台运行已允许" else "后台运行未允许",
+                active = backgroundRunPermissionGranted,
+            )
+            Text(
+                text = if (backgroundRunPermissionGranted) {
+                    "自动备份到点后会继续在后台尝试执行。"
+                } else {
+                    "如果这里没放行，自动备份可能要回到软件才会执行。"
+                },
+                color = LukoaColors.Muted,
+                style = MaterialTheme.typography.bodySmall,
+            )
+            SecondaryActionButton(
+                text = if (backgroundRunPermissionGranted) "重新打开权限页" else "去授权",
+                enabled = !actionsLocked,
+                accentColor = LukoaColors.Accent,
+                modifier = Modifier.fillMaxWidth(),
+                onClick = onRequestBackgroundRunPermission,
+            )
+        }
+
+        SectionPanel(title = "诊断与日志", accentColor = LukoaColors.Accent) {
             Text(
                 text = "Termux 新日志会自动同步到这里。",
                 color = LukoaColors.Muted,
@@ -2334,6 +2474,88 @@ fun SettingsSection(
                 onDecrease = onDecreaseTermuxReturnDelay,
                 onIncrease = onIncreaseTermuxReturnDelay,
             )
+        }
+    }
+}
+
+@Composable
+private fun SettingsOverviewCard(
+    tavernPathConfig: TavernPathConfig,
+    mirrorProbeStatus: TavernMirrorProbeStatus,
+    backgroundRunPermissionGranted: Boolean,
+    githubUpdateState: GithubUpdateUiState,
+) {
+    val updateStatusText = when {
+        githubUpdateState.downloading -> "下载中"
+        githubUpdateState.checking -> "检查中"
+        githubUpdateState.hasUpdate -> "有新版本"
+        githubUpdateState.latest != null -> "已是最新"
+        else -> "未检查"
+    }
+    val updateStatusColor = when {
+        githubUpdateState.downloading -> LukoaColors.Accent
+        githubUpdateState.checking -> LukoaColors.Amber
+        githubUpdateState.hasUpdate -> LukoaColors.Accent
+        githubUpdateState.latest != null -> LukoaColors.Muted
+        else -> LukoaColors.Muted
+    }
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = LukoaColors.Surface,
+        shape = RoundedCornerShape(8.dp),
+    ) {
+        Column(
+            modifier = Modifier
+                .border(1.dp, LukoaColors.Line, RoundedCornerShape(8.dp))
+                .padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Text(
+                text = "设置总览",
+                color = LukoaColors.Text,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                text = "这里主要管路径、网络、权限和启动器更新。",
+                color = LukoaColors.Muted,
+                style = MaterialTheme.typography.bodySmall,
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                VersionStatusValueCard(
+                    label = "酒馆目录",
+                    value = tavernPathConfig.displayTavernDir,
+                    accentColor = LukoaColors.Text,
+                    modifier = Modifier.weight(1f),
+                )
+                VersionStatusValueCard(
+                    label = "镜像状态",
+                    value = mirrorProbeStatus.overallLevel.label(),
+                    accentColor = mirrorProbeStatus.overallLevel.toneColor(),
+                    modifier = Modifier.weight(1f),
+                )
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                VersionStatusValueCard(
+                    label = "后台运行",
+                    value = if (backgroundRunPermissionGranted) "已允许" else "未允许",
+                    accentColor = if (backgroundRunPermissionGranted) LukoaColors.Accent else LukoaColors.Amber,
+                    modifier = Modifier.weight(1f),
+                )
+                VersionStatusValueCard(
+                    label = "启动器更新",
+                    value = updateStatusText,
+                    accentColor = updateStatusColor,
+                    modifier = Modifier.weight(1f),
+                )
+            }
         }
     }
 }

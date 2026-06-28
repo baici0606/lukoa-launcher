@@ -3,13 +3,19 @@ package moe.lukoa.launcher
 import android.os.Environment
 import android.os.SystemClock
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -21,6 +27,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
@@ -30,6 +37,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.math.absoluteValue
 
 @Composable
 fun LukoaLauncherScreen(
@@ -194,6 +202,10 @@ fun LukoaLauncherScreen(
     var startupRefreshToken by remember { mutableIntStateOf(0) }
     var startupGithubCheckPending by remember { mutableStateOf(false) }
     var selectedTab by remember { mutableStateOf(LauncherTab.Launch) }
+    val pagerState = rememberPagerState(
+        initialPage = selectedTab.ordinal,
+        pageCount = { LauncherTab.entries.size },
+    )
     var githubRepository by remember { mutableStateOf(initialGithubRepository) }
     var githubRepositoryInput by remember { mutableStateOf(initialGithubRepository) }
     var tavernMirrorConfig by remember { mutableStateOf(initialTavernMirrorConfig) }
@@ -2104,6 +2116,12 @@ fun LukoaLauncherScreen(
     }
 
     LaunchedEffect(selectedTab) {
+        if (pagerState.currentPage != selectedTab.ordinal) {
+            pagerState.animateScrollToPage(
+                page = selectedTab.ordinal,
+                animationSpec = tween(durationMillis = 320, easing = FastOutSlowInEasing),
+            )
+        }
         if (selectedTab == LauncherTab.Backup) {
             val result = withContext(Dispatchers.IO) {
                 runCatching { readLocalBackupLibrary() }
@@ -2121,6 +2139,13 @@ fun LukoaLauncherScreen(
                     allowRunningInference = false,
                 )
             }
+        }
+    }
+
+    LaunchedEffect(pagerState.settledPage) {
+        val pagerTab = LauncherTab.entries[pagerState.settledPage]
+        if (selectedTab != pagerTab) {
+            selectedTab = pagerTab
         }
     }
 
@@ -2494,259 +2519,285 @@ fun LukoaLauncherScreen(
             .fillMaxSize()
             .background(LukoaColors.Background),
     ) {
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .verticalScroll(rememberScrollState())
-                .padding(start = 16.dp, top = 42.dp, end = 16.dp, bottom = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
-        ) {
-            Header(
-                tavernRunning = tavernRunning,
-                tavernStarting = tavernStarting,
-                showVersionUpdateBadge = showGithubUpdateBadge,
-                onVersionClick = {
-                    if (githubUpdateState.hasUpdate) {
-                        showUpdateDialog = true
-                    } else {
-                        checkGithubUpdate(manual = true)
-                    }
-                },
-            )
+        HorizontalPager(
+            state = pagerState,
+            modifier = Modifier.weight(1f),
+            beyondViewportPageCount = 1,
+            pageSpacing = 8.dp,
+            contentPadding = PaddingValues(horizontal = 4.dp),
+        ) { page ->
+            val tab = LauncherTab.entries[page]
+            val pageOffset = (
+                (pagerState.currentPage - page) + pagerState.currentPageOffsetFraction
+                ).absoluteValue.coerceIn(0f, 1f)
+            val pageScale = 0.992f + ((1f - pageOffset) * 0.008f)
+            val pageAlpha = 0.94f + ((1f - pageOffset) * 0.06f)
+            val pageScrollState = rememberScrollState()
 
-            if (selectedTab != LauncherTab.Launch) {
-                if (busyLabel != null) {
-                    BusyPanel(label = busyLabel.orEmpty(), startedAtMillis = busyStartedAtMillis)
-                }
-            }
-
-            when (selectedTab) {
-                LauncherTab.Docs -> DocumentationSection()
-                LauncherTab.Version -> VersionManagementSection(
-                    actionsLocked = actionInProgress,
-                    tavernVersionInfo = tavernVersionInfo,
-                    officialVersions = officialVersions,
-                    selectedVersion = selectedTavernVersion,
-                    rollbackConfirmActive = rollbackConfirmActive,
-                    updateConfirmActive = updateConfirmActive,
-                    onRefreshOfficialVersions = ::refreshOfficialVersions,
-                    onSelectVersion = {
-                        selectedTavernVersion = it
-                        updateConfirmActive = false
-                        rollbackConfirmActive = false
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer {
+                        alpha = pageAlpha
+                        scaleX = pageScale
+                        scaleY = pageScale
                     },
-                    onTavernVersion = {
-                        runGuarded("重新检测酒馆版本", 18000L, allowRunningInference = false) { guardedUpdate ->
-                            onCommand("tavern-version", guardedUpdate)
-                        }
-                    },
-                    onTavernUpdate = ::requestTavernUpdate,
-                    onTavernRollback = ::requestTavernRollback,
-                )
-                LauncherTab.Launch -> {
-                    OverviewPanel(
-                        summary = summary,
-                        status = status,
-                        verified = verified,
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(pageScrollState)
+                        .padding(start = 16.dp, top = 42.dp, end = 16.dp, bottom = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                ) {
+                    Header(
                         tavernRunning = tavernRunning,
                         tavernStarting = tavernStarting,
-                        syncActive = termuxInstalled && runCommandPermissionGranted,
+                        showVersionUpdateBadge = showGithubUpdateBadge,
+                        onVersionClick = {
+                            if (githubUpdateState.hasUpdate) {
+                                showUpdateDialog = true
+                            } else {
+                                checkGithubUpdate(manual = true)
+                            }
+                        },
                     )
-                    if (busyLabel != null) {
-                        BusyPanel(label = busyLabel.orEmpty(), startedAtMillis = busyStartedAtMillis)
+
+                    if (tab != LauncherTab.Launch) {
+                        if (busyLabel != null) {
+                            BusyPanel(label = busyLabel.orEmpty(), startedAtMillis = busyStartedAtMillis)
+                        }
                     }
-                    val setupRecommended = termuxSetupRecommended()
-                    val showQuickStartGuide = !termuxInstalled ||
-                        termuxPermissionBlocked() ||
-                        setupRecommended ||
-                        tavernInstallDetected != true
-                    if (showQuickStartGuide) {
-                        QuickStartGuideSection(
-                            termuxInstalled = termuxInstalled,
-                            runCommandPermissionGranted = runCommandPermissionGranted,
-                            externalAppsBlocked = termuxExternalAppsBlocked,
-                            tavernInstallDetected = tavernInstallDetected,
-                            tavernVersionChecking = tavernVersionCheckInFlight,
-                            termuxSetupRecommended = setupRecommended,
+
+                    when (tab) {
+                        LauncherTab.Docs -> DocumentationSection()
+                        LauncherTab.Version -> VersionManagementSection(
+                            actionsLocked = actionInProgress,
+                            tavernVersionInfo = tavernVersionInfo,
                             officialVersions = officialVersions,
                             selectedVersion = selectedTavernVersion,
-                            commandText = TERMUX_EXTERNAL_APPS_COMMAND,
-                            actionsLocked = actionInProgress,
-                            onOpenTermuxDownload = {
-                                openTermuxDownload(TERMUX_FDROID_URL, "F-Droid 的 Termux 页面")
-                            },
-                            onOpenTermuxGithub = {
-                                openTermuxDownload(TERMUX_GITHUB_RELEASES_URL, "Termux GitHub Releases")
-                            },
-                            onRecheckTermux = ::recheckTermuxInstalled,
-                            onRequestPermission = ::requestRunCommandPermission,
-                            onOpenPermissionSettings = ::openLauncherPermissionSettings,
-                            onCopyPermissionCommand = ::copyTermuxPermissionCommand,
-                            onOpenTermux = ::openTermuxFromGuide,
-                            onRecheckPermission = ::recheckRunCommandPermission,
-                            onPrepareTermux = ::prepareTermuxEnvironment,
-                            onCheckTavern = ::checkTavernInstall,
-                            onShowInstall = ::enterTavernInstallFlow,
+                            rollbackConfirmActive = rollbackConfirmActive,
+                            updateConfirmActive = updateConfirmActive,
                             onRefreshOfficialVersions = ::refreshOfficialVersions,
-                            onSelectVersion = { selectedTavernVersion = it },
-                            onUseRecommendedVersion = ::useRecommendedTavernVersion,
-                            onInstallTavern = ::installSelectedTavern,
+                            onSelectVersion = {
+                                selectedTavernVersion = it
+                                updateConfirmActive = false
+                                rollbackConfirmActive = false
+                            },
+                            onTavernVersion = {
+                                runGuarded("重新检测酒馆版本", 18000L, allowRunningInference = false) { guardedUpdate ->
+                                    onCommand("tavern-version", guardedUpdate)
+                                }
+                            },
+                            onTavernUpdate = ::requestTavernUpdate,
+                            onTavernRollback = ::requestTavernRollback,
                         )
-                    }
-                    TavernControlSection(
-                        tavernRunning = tavernRunning,
-                        stopConfirmActive = stopConfirmActive,
-                        tavernStarting = tavernStarting,
-                        actionInProgress = actionInProgress,
-                        busyLabel = busyLabel,
-                        wakeEnabled = termuxInstalled,
-                        primaryEnabled = !tavernStarting &&
-                            !termuxKnownMissing() &&
-                            !termuxPermissionBlocked() &&
-                            (tavernRunning || tavernInstallDetected == true),
-                        primaryDisabledReason = when {
-                            termuxKnownMissing() -> "请先安装并打开 Termux。"
-                            termuxPermissionBlocked() -> "请先打开 Termux 调用权限。"
-                            tavernStarting -> "酒馆正在启动，请稍等。"
-                            tavernInstallDetected == null -> "请先检测酒馆或安装。"
-                            !tavernRunning && tavernInstallDetected == false -> "没检测到酒馆，请先安装。"
-                            else -> null
-                        },
-                        onWakeTermux = {
-                            if (beginBusy("唤醒 Termux", 6000L)) {
-                                val woke = onWakeTermux(termuxReturnDelayMs)
-                                releaseBusy()
-                                update(
-                                    if (woke) "已唤醒 Termux。"
-                                    else "唤醒失败：没找到 Termux。",
-                                    "",
-                                    woke,
+                        LauncherTab.Launch -> {
+                            OverviewPanel(
+                                summary = summary,
+                                status = status,
+                                verified = verified,
+                                tavernRunning = tavernRunning,
+                                tavernStarting = tavernStarting,
+                                syncActive = termuxInstalled && runCommandPermissionGranted,
+                            )
+                            if (busyLabel != null) {
+                                BusyPanel(label = busyLabel.orEmpty(), startedAtMillis = busyStartedAtMillis)
+                            }
+                            val setupRecommended = termuxSetupRecommended()
+                            val showQuickStartGuide = !termuxInstalled ||
+                                termuxPermissionBlocked() ||
+                                setupRecommended ||
+                                tavernInstallDetected != true
+                            if (showQuickStartGuide) {
+                                QuickStartGuideSection(
+                                    termuxInstalled = termuxInstalled,
+                                    runCommandPermissionGranted = runCommandPermissionGranted,
+                                    externalAppsBlocked = termuxExternalAppsBlocked,
+                                    tavernInstallDetected = tavernInstallDetected,
+                                    tavernVersionChecking = tavernVersionCheckInFlight,
+                                    termuxSetupRecommended = setupRecommended,
+                                    officialVersions = officialVersions,
+                                    selectedVersion = selectedTavernVersion,
+                                    commandText = TERMUX_EXTERNAL_APPS_COMMAND,
+                                    actionsLocked = actionInProgress,
+                                    onOpenTermuxDownload = {
+                                        openTermuxDownload(TERMUX_FDROID_URL, "F-Droid 的 Termux 页面")
+                                    },
+                                    onOpenTermuxGithub = {
+                                        openTermuxDownload(TERMUX_GITHUB_RELEASES_URL, "Termux GitHub Releases")
+                                    },
+                                    onRecheckTermux = ::recheckTermuxInstalled,
+                                    onRequestPermission = ::requestRunCommandPermission,
+                                    onOpenPermissionSettings = ::openLauncherPermissionSettings,
+                                    onCopyPermissionCommand = ::copyTermuxPermissionCommand,
+                                    onOpenTermux = ::openTermuxFromGuide,
+                                    onRecheckPermission = ::recheckRunCommandPermission,
+                                    onPrepareTermux = ::prepareTermuxEnvironment,
+                                    onCheckTavern = ::checkTavernInstall,
+                                    onShowInstall = ::enterTavernInstallFlow,
+                                    onRefreshOfficialVersions = ::refreshOfficialVersions,
+                                    onSelectVersion = { selectedTavernVersion = it },
+                                    onUseRecommendedVersion = ::useRecommendedTavernVersion,
+                                    onInstallTavern = ::installSelectedTavern,
                                 )
                             }
-                        },
-                        onPrimaryAction = {
-                            if (tavernRunning) requestStopTavern() else startTavern()
-                        },
-                        onOpenTavern = ::returnToTavern,
-                        onExportLog = { showExportDialog = true },
-                    )
-                    IssueAnalysisPanel(issueAnalysis)
-                    LogPanel(
-                        title = "Termux 调用返回",
-                        content = termuxLog,
-                        accentColor = LukoaColors.Accent,
-                    )
-                    LogPanel(
-                        title = "App 操作反馈",
-                        content = appLog,
-                        accentColor = LukoaColors.Muted,
-                    )
-                }
-                LauncherTab.Backup -> BackupSection(
-                    actionsLocked = actionInProgress,
-                    backupListRefreshing = backupListRefreshing,
-                    autoBackupEnabled = autoBackupEnabled,
-                    autoBackupIntervalMinutes = autoBackupIntervalMinutes,
-                    autoBackupKeepCount = autoBackupKeepCount,
-                    backupHistory = backupHistory,
-                    onCreateManualBackup = {
-                        manualBackupName = ""
-                        showManualBackupDialog = true
-                    },
-                    onToggleAutoBackup = ::toggleAutoBackup,
-                    onRefreshBackups = ::refreshBackupList,
-                    onOpenAutoBackupSettings = { showAutoBackupSettingsDialog = true },
-                    onApplyBackup = ::requestApplyBackup,
-                    onCopyBackup = ::requestCopyBackup,
-                    onRenameBackup = ::requestRenameBackup,
-                    onDeleteBackup = ::requestDeleteBackup,
-                    onExportBackup = ::exportBackupArchive,
-                    onImportBackup = ::pickAndImportExternalBackup,
-                    onCopyBackupLibraryPath = ::copyBackupLibraryPath,
-                )
-                LauncherTab.Settings -> SettingsSection(
-                    termuxReturnDelayMs = termuxReturnDelayMs,
-                    backgroundRunPermissionGranted = backgroundRunPermissionGranted,
-                    tavernMirrorConfig = tavernMirrorConfig,
-                    tavernPathConfig = tavernPathConfig,
-                    tavernRepoInput = tavernRepoInput,
-                    npmRegistryInput = npmRegistryInput,
-                    tavernPathInput = tavernPathInput,
-                    mirrorProbeStatus = currentMirrorProbeStatus(),
-                    termuxRepoStatus = termuxRepoStatus,
-                    customTermuxRepoInput = customTermuxRepoInput,
-                    repositoryInput = githubRepositoryInput,
-                    githubUpdateState = githubUpdateState,
-                    actionsLocked = actionInProgress,
-                    onTavernRepoInputChange = { tavernRepoInput = it },
-                    onNpmRegistryInputChange = { npmRegistryInput = it },
-                    onTavernPathInputChange = { tavernPathInput = it },
-                    onCustomTermuxRepoInputChange = { customTermuxRepoInput = it },
-                    onSaveTavernPath = { saveTavernPathConfig() },
-                    onRestoreDefaultTavernPath = ::restoreDefaultTavernPath,
-                    onSaveTavernMirror = { saveTavernMirrorConfig() },
-                    onUseOfficialMirror = ::useOfficialTavernMirror,
-                    onUseGithubProxyMirror = ::useGithubProxyTavernMirror,
-                    onUseNpmMirror = ::useNpmMirrorOnly,
-                    onCheckTavernMirror = {
-                        if (actionInProgress) {
-                            update("正在处理，完成后再检测镜像源。", "", false, allowRunningInference = false)
-                        } else {
-                            mirrorProbeStatus = TavernMirrorProbeStatus.checking(tavernMirrorConfig)
-                            onCheckTavernMirror(tavernMirrorConfig) { result ->
-                                mirrorProbeStatus = result
-                                val ok = result.overallLevel != MirrorProbeLevel.Failed
-                                val message = when (result.overallLevel) {
-                                    MirrorProbeLevel.Healthy -> "镜像源检测完成，当前源可用。"
-                                    MirrorProbeLevel.Warning -> "镜像源检测完成，有提醒项，安装前建议看一眼。"
-                                    MirrorProbeLevel.Failed -> "镜像源检测失败，请先换源或检查网络。"
-                                    MirrorProbeLevel.Unknown -> "镜像源还没检测完成。"
-                                }
-                                update(message, "", ok, allowRunningInference = false)
-                            }
+                            TavernControlSection(
+                                tavernRunning = tavernRunning,
+                                stopConfirmActive = stopConfirmActive,
+                                tavernStarting = tavernStarting,
+                                actionInProgress = actionInProgress,
+                                busyLabel = busyLabel,
+                                wakeEnabled = termuxInstalled,
+                                primaryEnabled = !tavernStarting &&
+                                    !termuxKnownMissing() &&
+                                    !termuxPermissionBlocked() &&
+                                    (tavernRunning || tavernInstallDetected == true),
+                                primaryDisabledReason = when {
+                                    termuxKnownMissing() -> "请先安装并打开 Termux。"
+                                    termuxPermissionBlocked() -> "请先打开 Termux 调用权限。"
+                                    tavernStarting -> "酒馆正在启动，请稍等。"
+                                    tavernInstallDetected == null -> "请先检测酒馆或安装。"
+                                    !tavernRunning && tavernInstallDetected == false -> "没检测到酒馆，请先安装。"
+                                    else -> null
+                                },
+                                onWakeTermux = {
+                                    if (beginBusy("唤醒 Termux", 6000L)) {
+                                        val woke = onWakeTermux(termuxReturnDelayMs)
+                                        releaseBusy()
+                                        update(
+                                            if (woke) "已唤醒 Termux。"
+                                            else "唤醒失败：没找到 Termux。",
+                                            "",
+                                            woke,
+                                        )
+                                    }
+                                },
+                                onPrimaryAction = {
+                                    if (tavernRunning) requestStopTavern() else startTavern()
+                                },
+                                onOpenTavern = ::returnToTavern,
+                                onExportLog = { showExportDialog = true },
+                            )
+                            IssueAnalysisPanel(issueAnalysis)
+                            LogPanel(
+                                title = "Termux 调用返回",
+                                content = termuxLog,
+                                accentColor = LukoaColors.Accent,
+                            )
+                            LogPanel(
+                                title = "App 操作反馈",
+                                content = appLog,
+                                accentColor = LukoaColors.Muted,
+                            )
                         }
-                    },
-                    onReadTermuxRepoStatus = ::readTermuxPackageMirrorStatus,
-                    onApplyCustomTermuxMirror = ::applyCustomTermuxPackageMirror,
-                    onRequestBackgroundRunPermission = {
-                        val opened = onRequestBackgroundRunPermission()
-                        update(
-                            if (opened) {
-                                "已打开后台运行权限页面。允许后回启动器即可。"
-                            } else {
-                                "打开后台运行权限页面失败，请到系统设置里允许后台运行。"
+                        LauncherTab.Backup -> BackupSection(
+                            actionsLocked = actionInProgress,
+                            backupListRefreshing = backupListRefreshing,
+                            autoBackupEnabled = autoBackupEnabled,
+                            autoBackupIntervalMinutes = autoBackupIntervalMinutes,
+                            autoBackupKeepCount = autoBackupKeepCount,
+                            backupHistory = backupHistory,
+                            onCreateManualBackup = {
+                                manualBackupName = ""
+                                showManualBackupDialog = true
                             },
-                            "",
-                            opened,
-                            allowRunningInference = false,
+                            onToggleAutoBackup = ::toggleAutoBackup,
+                            onRefreshBackups = ::refreshBackupList,
+                            onOpenAutoBackupSettings = { showAutoBackupSettingsDialog = true },
+                            onApplyBackup = ::requestApplyBackup,
+                            onCopyBackup = ::requestCopyBackup,
+                            onRenameBackup = ::requestRenameBackup,
+                            onDeleteBackup = ::requestDeleteBackup,
+                            onExportBackup = ::exportBackupArchive,
+                            onImportBackup = ::pickAndImportExternalBackup,
+                            onCopyBackupLibraryPath = ::copyBackupLibraryPath,
                         )
-                    },
-                    onRepositoryInputChange = { githubRepositoryInput = it },
-                    onSaveRepository = ::saveGithubRepository,
-                    onRestoreDefaultRepository = ::restoreDefaultGithubRepository,
-                    onCheckUpdate = { checkGithubUpdate(manual = true) },
-                    onInstallUpdate = {
-                        if (githubUpdateState.hasUpdate) {
-                            showUpdateDialog = true
-                        } else {
-                            checkGithubUpdate(manual = true)
-                        }
-                    },
-                    onOpenRelease = {
-                        githubUpdateState.latest?.let { latest ->
-                            val result = onOpenGithubRelease(latest)
-                            update(result.message, "", result.ok, allowRunningInference = false)
-                        }
-                    },
-                    onClearLogs = ::requestClearLogs,
-                    onExportDiagnostic = ::exportDiagnosticLog,
-                    onDecreaseTermuxReturnDelay = {
-                        updateTermuxReturnDelay(termuxReturnDelayMs - 100L)
-                    },
-                    onIncreaseTermuxReturnDelay = {
-                        updateTermuxReturnDelay(termuxReturnDelayMs + 100L)
-                    },
-                )
+                        LauncherTab.Settings -> SettingsSection(
+                            termuxReturnDelayMs = termuxReturnDelayMs,
+                            backgroundRunPermissionGranted = backgroundRunPermissionGranted,
+                            tavernMirrorConfig = tavernMirrorConfig,
+                            tavernPathConfig = tavernPathConfig,
+                            tavernRepoInput = tavernRepoInput,
+                            npmRegistryInput = npmRegistryInput,
+                            tavernPathInput = tavernPathInput,
+                            mirrorProbeStatus = currentMirrorProbeStatus(),
+                            termuxRepoStatus = termuxRepoStatus,
+                            customTermuxRepoInput = customTermuxRepoInput,
+                            repositoryInput = githubRepositoryInput,
+                            githubUpdateState = githubUpdateState,
+                            actionsLocked = actionInProgress,
+                            onTavernRepoInputChange = { tavernRepoInput = it },
+                            onNpmRegistryInputChange = { npmRegistryInput = it },
+                            onTavernPathInputChange = { tavernPathInput = it },
+                            onCustomTermuxRepoInputChange = { customTermuxRepoInput = it },
+                            onSaveTavernPath = { saveTavernPathConfig() },
+                            onRestoreDefaultTavernPath = ::restoreDefaultTavernPath,
+                            onSaveTavernMirror = { saveTavernMirrorConfig() },
+                            onUseOfficialMirror = ::useOfficialTavernMirror,
+                            onUseGithubProxyMirror = ::useGithubProxyTavernMirror,
+                            onUseNpmMirror = ::useNpmMirrorOnly,
+                            onCheckTavernMirror = {
+                                if (actionInProgress) {
+                                    update("正在处理，完成后再检测镜像源。", "", false, allowRunningInference = false)
+                                } else {
+                                    mirrorProbeStatus = TavernMirrorProbeStatus.checking(tavernMirrorConfig)
+                                    onCheckTavernMirror(tavernMirrorConfig) { result ->
+                                        mirrorProbeStatus = result
+                                        val ok = result.overallLevel != MirrorProbeLevel.Failed
+                                        val message = when (result.overallLevel) {
+                                            MirrorProbeLevel.Healthy -> "镜像源检测完成，当前源可用。"
+                                            MirrorProbeLevel.Warning -> "镜像源检测完成，有提醒项，安装前建议看一眼。"
+                                            MirrorProbeLevel.Failed -> "镜像源检测失败，请先换源或检查网络。"
+                                            MirrorProbeLevel.Unknown -> "镜像源还没检测完成。"
+                                        }
+                                        update(message, "", ok, allowRunningInference = false)
+                                    }
+                                }
+                            },
+                            onReadTermuxRepoStatus = ::readTermuxPackageMirrorStatus,
+                            onApplyCustomTermuxMirror = ::applyCustomTermuxPackageMirror,
+                            onRequestBackgroundRunPermission = {
+                                val opened = onRequestBackgroundRunPermission()
+                                update(
+                                    if (opened) {
+                                        "已打开后台运行权限页面。允许后回启动器即可。"
+                                    } else {
+                                        "打开后台运行权限页面失败，请到系统设置里允许后台运行。"
+                                    },
+                                    "",
+                                    opened,
+                                    allowRunningInference = false,
+                                )
+                            },
+                            onRepositoryInputChange = { githubRepositoryInput = it },
+                            onSaveRepository = ::saveGithubRepository,
+                            onRestoreDefaultRepository = ::restoreDefaultGithubRepository,
+                            onCheckUpdate = { checkGithubUpdate(manual = true) },
+                            onInstallUpdate = {
+                                if (githubUpdateState.hasUpdate) {
+                                    showUpdateDialog = true
+                                } else {
+                                    checkGithubUpdate(manual = true)
+                                }
+                            },
+                            onOpenRelease = {
+                                githubUpdateState.latest?.let { latest ->
+                                    val result = onOpenGithubRelease(latest)
+                                    update(result.message, "", result.ok, allowRunningInference = false)
+                                }
+                            },
+                            onClearLogs = ::requestClearLogs,
+                            onExportDiagnostic = ::exportDiagnosticLog,
+                            onDecreaseTermuxReturnDelay = {
+                                updateTermuxReturnDelay(termuxReturnDelayMs - 100L)
+                            },
+                            onIncreaseTermuxReturnDelay = {
+                                updateTermuxReturnDelay(termuxReturnDelayMs + 100L)
+                            },
+                        )
+                    }
+                }
             }
         }
 
