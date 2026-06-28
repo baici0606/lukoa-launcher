@@ -79,6 +79,24 @@ powershell -ExecutionPolicy Bypass -File .\publish-github-release.ps1 -VersionNa
 powershell -ExecutionPolicy Bypass -File .\publish-github-release.ps1 -VersionName 0.8.20 -VersionCode 150 -ReleaseNotesFile .\release-notes.md
 ```
 
+自动从 `制作进度.md` 生成一份长公告：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\publish-github-release.ps1 -VersionName 0.8.20 -VersionCode 150 -AutoNotes
+```
+
+如果你想明确指定“从哪个旧版本开始写到现在”，可以加：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\publish-github-release.ps1 -VersionName 0.8.20 -VersionCode 150 -AutoNotes -AutoNotesFrom 0.5.5
+```
+
+如果当前版本还有一些没写进 `制作进度.md` 的收尾内容，可以额外补几条：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\publish-github-release.ps1 -VersionName 0.8.20 -VersionCode 150 -AutoNotes -CurrentHighlights "补齐多酒馆目录选择" -CurrentHighlights "安装前预检接入镜像源检测"
+```
+
 只改版本号和发版文案、跳过重新构建：
 
 ```powershell

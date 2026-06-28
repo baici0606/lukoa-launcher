@@ -8,6 +8,10 @@ param(
     [string]$ReleaseTitle = "",
     [string]$ReleaseNotes = "",
     [string]$ReleaseNotesFile = "",
+    [switch]$AutoNotes,
+    [string]$AutoNotesFrom = "",
+    [string]$AutoNotesSource = "",
+    [string[]]$CurrentHighlights = @(),
     [string]$AndroidHome = "",
     [switch]$SkipBuild,
     [switch]$ValidateOnly
@@ -69,13 +73,49 @@ function Update-VersionInGradle {
 
 function Resolve-ReleaseNotesPath {
     param(
+        [string]$ProjectRoot,
         [string]$Version,
         [string]$Notes,
-        [string]$NotesFilePath
+        [string]$NotesFilePath,
+        [bool]$UseAutoNotes,
+        [string]$AutoNotesFromVersion,
+        [string]$AutoNotesSourcePath,
+        [string[]]$CurrentVersionHighlights
     )
 
     if (-not [string]::IsNullOrWhiteSpace($NotesFilePath)) {
         return (Resolve-Path -LiteralPath $NotesFilePath -ErrorAction Stop).Path
+    }
+
+    if ($UseAutoNotes) {
+        $generatorScript = Join-Path $ProjectRoot "generate-release-notes.ps1"
+        if (-not (Test-Path -LiteralPath $generatorScript)) {
+            throw ('Release note generator not found: {0}' -f $generatorScript)
+        }
+
+        $tempPath = Join-Path $env:TEMP ("lukoa-release-notes-{0}.md" -f $Version)
+        $arguments = @(
+            "-ExecutionPolicy", "Bypass",
+            "-File", $generatorScript,
+            "-TargetVersion", $Version,
+            "-OutputFile", $tempPath
+        )
+
+        if (-not [string]::IsNullOrWhiteSpace($AutoNotesFromVersion)) {
+            $arguments += @("-FromVersion", $AutoNotesFromVersion)
+        }
+        if (-not [string]::IsNullOrWhiteSpace($AutoNotesSourcePath)) {
+            $arguments += @("-SourceFile", $AutoNotesSourcePath)
+        }
+        foreach ($highlight in $CurrentVersionHighlights) {
+            $arguments += @("-CurrentHighlights", $highlight)
+        }
+
+        & powershell @arguments
+        if ($LASTEXITCODE -ne 0) {
+            throw "Automatic release note generation failed."
+        }
+        return $tempPath
     }
 
     $defaultNotes = if ([string]::IsNullOrWhiteSpace($Notes)) {
@@ -133,6 +173,7 @@ if ($ValidateOnly) {
         gradleFile = $gradleFile
         projectRoot = $normalizedProjectRoot
         gh = $ghPath
+        autoNotes = $AutoNotes
     } | ConvertTo-Json
     exit 0
 }
@@ -180,7 +221,15 @@ Invoke-Git tag $tagName
 Invoke-Git push origin $branch
 Invoke-Git push origin $tagName
 
-$notesPath = Resolve-ReleaseNotesPath -Version $VersionName -Notes $ReleaseNotes -NotesFilePath $ReleaseNotesFile
+$notesPath = Resolve-ReleaseNotesPath `
+    -ProjectRoot $projectRoot `
+    -Version $VersionName `
+    -Notes $ReleaseNotes `
+    -NotesFilePath $ReleaseNotesFile `
+    -UseAutoNotes $AutoNotes.IsPresent `
+    -AutoNotesFromVersion $AutoNotesFrom `
+    -AutoNotesSourcePath $AutoNotesSource `
+    -CurrentVersionHighlights $CurrentHighlights
 $title = if ([string]::IsNullOrWhiteSpace($ReleaseTitle)) { $tagName } else { $ReleaseTitle }
 
 & $ghPath release view $tagName 1>$null 2>$null
