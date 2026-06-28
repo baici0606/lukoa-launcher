@@ -30,6 +30,13 @@ enum class BackupLibraryPathTarget {
     Auto,
 }
 
+private enum class BackupSectionView {
+    Quick,
+    Auto,
+    Library,
+    Safety,
+}
+
 @Composable
 fun BackupSection(
     actionsLocked: Boolean,
@@ -52,8 +59,31 @@ fun BackupSection(
 ) {
     var showBackupContentDialog by remember { mutableStateOf(false) }
     var showCopyPathDialog by remember { mutableStateOf(false) }
+    var selectedView by remember { mutableStateOf(BackupSectionView.Quick) }
     val manualBackups = backupHistory.filter { isManualBackupPath(it) }
     val autoBackups = backupHistory.filter { isAutoBackupPath(it) }
+    val sectionOptions = listOf(
+        SectionSwitchOption(
+            value = BackupSectionView.Quick,
+            label = "快捷操作",
+            description = "先做备份、导入备份、刷新备份库和复制备份路径，都在这里。",
+        ),
+        SectionSwitchOption(
+            value = BackupSectionView.Auto,
+            label = "自动备份",
+            description = "这里只看自动备份开关、间隔和保留策略。",
+        ),
+        SectionSwitchOption(
+            value = BackupSectionView.Library,
+            label = "备份库",
+            description = "手动备份库和自动备份库分开看，应用、导出、复制、重命名、删除都在这里。",
+        ),
+        SectionSwitchOption(
+            value = BackupSectionView.Safety,
+            label = "数据安全",
+            description = "提醒你哪些操作会覆盖数据，哪些只是导入导出文件。",
+        ),
+    )
 
     if (showBackupContentDialog) {
         BackupContentInfoDialog(onDismiss = { showBackupContentDialog = false })
@@ -80,149 +110,167 @@ fun BackupSection(
             manualBackupCount = manualBackups.size,
             autoBackupCount = autoBackups.size,
         )
+        SectionSwitcherCard(
+            title = "备份分区",
+            options = sectionOptions,
+            selected = selectedView,
+            onSelect = { selectedView = it },
+        )
 
-        SectionPanel(
-            title = "快速操作",
-            accentColor = LukoaColors.Accent,
-            headerAction = {
-                InfoIconButton(
-                    contentDescription = "查看备份内容说明",
-                    onClick = { showBackupContentDialog = true },
-                )
-            },
-        ) {
-            Text(
-                text = "先做备份，再更新、回退或应用外部备份，会更稳。",
-                color = LukoaColors.Muted,
-                style = MaterialTheme.typography.bodySmall,
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                SecondaryActionButton(
-                    text = "生成备份",
-                    enabled = !actionsLocked,
-                    accentColor = LukoaColors.Accent,
-                    modifier = Modifier.weight(1f),
-                    onClick = onCreateManualBackup,
-                )
-                SecondaryActionButton(
-                    text = "导入到备份库",
-                    enabled = !actionsLocked,
-                    accentColor = LukoaColors.Accent,
-                    modifier = Modifier.weight(1f),
-                    onClick = onImportBackup,
-                )
-            }
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                SecondaryActionButton(
-                    text = if (backupListRefreshing) "刷新中..." else "刷新列表",
-                    enabled = !actionsLocked && !backupListRefreshing,
-                    accentColor = LukoaColors.Accent,
-                    modifier = Modifier.weight(1f),
-                    onClick = onRefreshBackups,
-                )
-                SecondaryActionButton(
-                    text = "复制文件地址",
-                    enabled = !actionsLocked,
-                    accentColor = LukoaColors.Accent,
-                    modifier = Modifier.weight(1f),
-                    onClick = { showCopyPathDialog = true },
-                )
-            }
-        }
-
-        SectionPanel(title = "自动备份", accentColor = LukoaColors.Accent) {
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                color = if (autoBackupEnabled) LukoaColors.AccentSoft else LukoaColors.SurfaceAlt,
-                shape = RoundedCornerShape(8.dp),
-                border = BorderStroke(1.dp, if (autoBackupEnabled) LukoaColors.Accent.copy(alpha = 0.45f) else LukoaColors.Line),
-            ) {
-                Column(
-                    modifier = Modifier.padding(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    Text(
-                        text = if (autoBackupEnabled) "自动备份已开启" else "自动备份未开启",
-                        color = if (autoBackupEnabled) LukoaColors.Text else LukoaColors.Muted,
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Bold,
+        when (selectedView) {
+            BackupSectionView.Quick -> SectionPanel(
+                title = "快速操作",
+                accentColor = LukoaColors.Accent,
+                headerAction = {
+                    InfoIconButton(
+                        contentDescription = "查看备份内容说明",
+                        onClick = { showBackupContentDialog = true },
                     )
-                    Text(
-                        text = if (autoBackupEnabled) {
-                            "每 ${formatBackupInterval(autoBackupIntervalMinutes)} 一次，最多保留 ${autoBackupKeepCount} 个，只清理最旧的自动备份。"
-                        } else {
-                            "开启后会把备份放进 Download/lukoa/backups/zd。"
-                        },
-                        color = if (autoBackupEnabled) LukoaColors.Text else LukoaColors.Muted,
-                        style = MaterialTheme.typography.bodySmall,
+                },
+            ) {
+                Text(
+                    text = "先做备份，再更新、回退或应用外部备份，会更稳。",
+                    color = LukoaColors.Muted,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    SecondaryActionButton(
+                        text = "生成备份",
+                        enabled = !actionsLocked,
+                        accentColor = LukoaColors.Accent,
+                        modifier = Modifier.weight(1f),
+                        onClick = onCreateManualBackup,
+                    )
+                    SecondaryActionButton(
+                        text = "导入到备份库",
+                        enabled = !actionsLocked,
+                        accentColor = LukoaColors.Accent,
+                        modifier = Modifier.weight(1f),
+                        onClick = onImportBackup,
+                    )
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    SecondaryActionButton(
+                        text = if (backupListRefreshing) "刷新中..." else "刷新列表",
+                        enabled = !actionsLocked && !backupListRefreshing,
+                        accentColor = LukoaColors.Accent,
+                        modifier = Modifier.weight(1f),
+                        onClick = onRefreshBackups,
+                    )
+                    SecondaryActionButton(
+                        text = "复制文件地址",
+                        enabled = !actionsLocked,
+                        accentColor = LukoaColors.Accent,
+                        modifier = Modifier.weight(1f),
+                        onClick = { showCopyPathDialog = true },
                     )
                 }
             }
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                SecondaryActionButton(
-                    text = if (autoBackupEnabled) "关闭自动备份" else "开启自动备份",
-                    enabled = !actionsLocked,
-                    accentColor = if (autoBackupEnabled) LukoaColors.Danger else LukoaColors.Accent,
-                    modifier = Modifier.weight(1f),
-                    onClick = onToggleAutoBackup,
+
+            BackupSectionView.Auto -> SectionPanel(title = "自动备份", accentColor = LukoaColors.Accent) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = if (autoBackupEnabled) LukoaColors.AccentSoft else LukoaColors.SurfaceAlt,
+                    shape = RoundedCornerShape(8.dp),
+                    border = BorderStroke(1.dp, if (autoBackupEnabled) LukoaColors.Accent.copy(alpha = 0.45f) else LukoaColors.Line),
+                ) {
+                    Column(
+                        modifier = Modifier.padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        Text(
+                            text = if (autoBackupEnabled) "自动备份已开启" else "自动备份未开启",
+                            color = if (autoBackupEnabled) LukoaColors.Text else LukoaColors.Muted,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold,
+                        )
+                        Text(
+                            text = if (autoBackupEnabled) {
+                                "每 ${formatBackupInterval(autoBackupIntervalMinutes)} 一次，最多保留 ${autoBackupKeepCount} 个，只清理最旧的自动备份。"
+                            } else {
+                                "开启后会把备份放进 Download/lukoa/backups/zd。"
+                            },
+                            color = if (autoBackupEnabled) LukoaColors.Text else LukoaColors.Muted,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    SecondaryActionButton(
+                        text = if (autoBackupEnabled) "关闭自动备份" else "开启自动备份",
+                        enabled = !actionsLocked,
+                        accentColor = if (autoBackupEnabled) LukoaColors.Danger else LukoaColors.Accent,
+                        modifier = Modifier.weight(1f),
+                        onClick = onToggleAutoBackup,
+                    )
+                    SecondaryActionButton(
+                        text = "自动备份设置",
+                        enabled = !actionsLocked,
+                        accentColor = LukoaColors.Info,
+                        modifier = Modifier.weight(1f),
+                        onClick = onOpenAutoBackupSettings,
+                    )
+                }
+            }
+
+            BackupSectionView.Library -> SectionPanel(title = "备份库", accentColor = LukoaColors.Accent) {
+                Text(
+                    text = "导入会进手动备份库 sd。导出时会打开文件管理器让你选保存位置。",
+                    color = LukoaColors.Muted,
+                    style = MaterialTheme.typography.bodySmall,
                 )
-                SecondaryActionButton(
-                    text = "自动备份设置",
-                    enabled = !actionsLocked,
-                    accentColor = LukoaColors.Info,
-                    modifier = Modifier.weight(1f),
-                    onClick = onOpenAutoBackupSettings,
+                BackupLibraryGroup(
+                    title = "手动备份库 (${manualBackups.size})",
+                    subtitle = "Download/lukoa/backups/sd",
+                    emptyText = "手动备份库还没有备份。",
+                    backups = manualBackups,
+                    actionsLocked = actionsLocked,
+                    onApplyBackup = onApplyBackup,
+                    onExportBackup = onExportBackup,
+                    onCopyBackup = onCopyBackup,
+                    onRenameBackup = onRenameBackup,
+                    onDeleteBackup = onDeleteBackup,
+                )
+                BackupLibraryGroup(
+                    title = "自动备份库 (${autoBackups.size})",
+                    subtitle = "Download/lukoa/backups/zd",
+                    emptyText = "自动备份库还没有备份。",
+                    backups = autoBackups,
+                    actionsLocked = actionsLocked,
+                    onApplyBackup = onApplyBackup,
+                    onExportBackup = onExportBackup,
+                    onCopyBackup = onCopyBackup,
+                    onRenameBackup = onRenameBackup,
+                    onDeleteBackup = onDeleteBackup,
                 )
             }
-        }
 
-        SectionPanel(title = "备份库", accentColor = LukoaColors.Accent) {
-            Text(
-                text = "导入会进手动备份库 sd。导出时会打开文件管理器让你选保存位置。",
-                color = LukoaColors.Muted,
-                style = MaterialTheme.typography.bodySmall,
-            )
-            BackupLibraryGroup(
-                title = "手动备份库 (${manualBackups.size})",
-                subtitle = "Download/lukoa/backups/sd",
-                emptyText = "手动备份库还没有备份。",
-                backups = manualBackups,
-                actionsLocked = actionsLocked,
-                onApplyBackup = onApplyBackup,
-                onExportBackup = onExportBackup,
-                onCopyBackup = onCopyBackup,
-                onRenameBackup = onRenameBackup,
-                onDeleteBackup = onDeleteBackup,
-            )
-            BackupLibraryGroup(
-                title = "自动备份库 (${autoBackups.size})",
-                subtitle = "Download/lukoa/backups/zd",
-                emptyText = "自动备份库还没有备份。",
-                backups = autoBackups,
-                actionsLocked = actionsLocked,
-                onApplyBackup = onApplyBackup,
-                onExportBackup = onExportBackup,
-                onCopyBackup = onCopyBackup,
-                onRenameBackup = onRenameBackup,
-                onDeleteBackup = onDeleteBackup,
-            )
-        }
-
-        SectionPanel(title = "数据安全", accentColor = LukoaColors.Danger) {
-            Text(
-                text = "应用备份前先停止酒馆。删除只删选中的备份包。",
-                color = LukoaColors.Muted,
-                style = MaterialTheme.typography.bodySmall,
-            )
+            BackupSectionView.Safety -> SectionPanel(title = "数据安全", accentColor = LukoaColors.Danger) {
+                Text(
+                    text = "应用备份前先停止酒馆。删除只删选中的备份包。",
+                    color = LukoaColors.Muted,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                Text(
+                    text = "导入到备份库只是复制备份文件；应用备份才会真正覆盖当前酒馆目录。",
+                    color = LukoaColors.Muted,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                Text(
+                    text = "做更新、回退、装插件前，最好先手动生成一个备份。",
+                    color = LukoaColors.Muted,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
         }
     }
 }

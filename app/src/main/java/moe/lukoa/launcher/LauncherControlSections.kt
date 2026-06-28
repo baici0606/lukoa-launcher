@@ -58,6 +58,20 @@ enum class LauncherTab(
     Settings("设置", "设"),
 }
 
+private enum class VersionPageView {
+    Current,
+    Target,
+}
+
+private enum class SettingsPageView {
+    Path,
+    Mirror,
+    Permissions,
+    Update,
+    Diagnostic,
+    Wake,
+}
+
 @Composable
 fun LauncherBottomBar(
     selectedTab: LauncherTab,
@@ -741,6 +755,23 @@ fun VersionManagementSection(
         actionState.updateDisabledReason?.let { "更新：$it" },
         actionState.rollbackDisabledReason?.let { "回退：$it" },
     ).distinct()
+    var selectedView by remember {
+        mutableStateOf(
+            if (tavernVersionInfo.hasData) VersionPageView.Current else VersionPageView.Target,
+        )
+    }
+    val viewOptions = listOf(
+        SectionSwitchOption(
+            value = VersionPageView.Current,
+            label = "当前安装",
+            description = "看当前酒馆版本、分支、提交、本地改动和检测目录。",
+        ),
+        SectionSwitchOption(
+            value = VersionPageView.Target,
+            label = "目标切换",
+            description = "读取官方版本、选择目标版本，再决定更新还是回退。",
+        ),
+    )
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
         VersionOverviewCard(
             tavernVersionInfo = tavernVersionInfo,
@@ -749,124 +780,132 @@ fun VersionManagementSection(
             actionsLocked = actionsLocked,
             onRefreshCurrentVersion = onTavernVersion,
         )
+        SectionSwitcherCard(
+            title = "版本分区",
+            options = viewOptions,
+            selected = selectedView,
+            onSelect = { selectedView = it },
+        )
 
-        SectionPanel(title = "当前安装信息", accentColor = LukoaColors.Accent) {
-            Text(
-                text = tavernVersionInfo.displayVersion,
-                color = when {
-                    tavernVersionInfo.hasData -> LukoaColors.Text
-                    tavernVersionInfo.notInstalled -> LukoaColors.Amber
-                    else -> LukoaColors.Muted
-                },
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
+        when (selectedView) {
+            VersionPageView.Current -> SectionPanel(title = "当前安装信息", accentColor = LukoaColors.Accent) {
+                Text(
+                    text = tavernVersionInfo.displayVersion,
+                    color = when {
+                        tavernVersionInfo.hasData -> LukoaColors.Text
+                        tavernVersionInfo.notInstalled -> LukoaColors.Amber
+                        else -> LukoaColors.Muted
+                    },
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
 
-            if (tavernVersionInfo.hasData) {
-                VersionInfoLine("分支", tavernVersionInfo.branch.ifBlank { "未读取" })
-                VersionInfoLine("提交", tavernVersionInfo.commit.ifBlank { "未读取" })
-                VersionInfoLine("Git 描述", tavernVersionInfo.describe.ifBlank { "未读取" })
-                VersionInfoLine("回退点", tavernVersionInfo.rollbackDisplay)
-                VersionInfoLine("目录", tavernVersionInfo.directory.ifBlank { "未读取" })
-                if (tavernVersionInfo.hasLocalChanges) {
+                if (tavernVersionInfo.hasData) {
+                    VersionInfoLine("分支", tavernVersionInfo.branch.ifBlank { "未读取" })
+                    VersionInfoLine("提交", tavernVersionInfo.commit.ifBlank { "未读取" })
+                    VersionInfoLine("Git 描述", tavernVersionInfo.describe.ifBlank { "未读取" })
+                    VersionInfoLine("回退点", tavernVersionInfo.rollbackDisplay)
+                    VersionInfoLine("目录", tavernVersionInfo.directory.ifBlank { "未读取" })
+                    if (tavernVersionInfo.hasLocalChanges) {
+                        Text(
+                            text = "酒馆源码有改动，先处理后再更新或回退。",
+                            color = LukoaColors.Danger,
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        Text(
+                            text = tavernVersionInfo.changedFilesPreview,
+                            color = LukoaColors.Muted,
+                            style = MaterialTheme.typography.bodySmall,
+                            maxLines = 4,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                } else if (tavernVersionInfo.notInstalled) {
                     Text(
-                        text = "酒馆源码有改动，先处理后再更新或回退。",
-                        color = LukoaColors.Danger,
-                        style = MaterialTheme.typography.bodySmall,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                    Text(
-                        text = tavernVersionInfo.changedFilesPreview,
+                        text = "没有找到酒馆目录。先读取目标版本，再回启动页安装酒馆。",
                         color = LukoaColors.Muted,
                         style = MaterialTheme.typography.bodySmall,
-                        maxLines = 4,
-                        overflow = TextOverflow.Ellipsis,
+                    )
+                    if (tavernVersionInfo.directory.isNotBlank()) {
+                        VersionInfoLine("检测目录", tavernVersionInfo.directory)
+                    }
+                } else {
+                    Text(
+                        text = "点上面的重新检测酒馆版本，就能读取当前安装信息。",
+                        color = LukoaColors.Muted,
+                        style = MaterialTheme.typography.bodySmall,
                     )
                 }
-            } else if (tavernVersionInfo.notInstalled) {
+            }
+
+            VersionPageView.Target -> SectionPanel(title = "目标版本与切换", accentColor = LukoaColors.Accent) {
                 Text(
-                    text = "没有找到酒馆目录。先读取目标版本，再回启动页安装酒馆。",
+                    text = when {
+                        tavernVersionInfo.hasData -> "先读取列表，再选目标版本。"
+                        tavernVersionInfo.notInstalled -> "酒馆未安装，也可以先读取官方版本给安装使用。"
+                        else -> "可以先读取官方版本；更新或回退前再检测当前版本。"
+                    },
                     color = LukoaColors.Muted,
                     style = MaterialTheme.typography.bodySmall,
                 )
-                if (tavernVersionInfo.directory.isNotBlank()) {
-                    VersionInfoLine("检测目录", tavernVersionInfo.directory)
+
+                OfficialVersionChooser(
+                    title = "官方版本下拉框",
+                    officialVersions = versionManagementChoices,
+                    selectedVersion = selectedVersion,
+                    actionsLocked = actionsLocked,
+                    refreshEnabled = !actionsLocked,
+                    emptyStateText = if (officialVersions.hasData) {
+                        "当前版本已经隐藏，暂时没有别的官方版本。"
+                    } else {
+                        "先读取官方版本"
+                    },
+                    onRefreshOfficialVersions = onRefreshOfficialVersions,
+                    onSelectVersion = onSelectVersion,
+                )
+
+                VersionOperationStatusCard(
+                    currentVersionInfo = tavernVersionInfo,
+                    selectedVersion = selectedVersion,
+                    actionState = actionState,
+                    disabledReasons = disabledReasons,
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    SecondaryActionButton(
+                        text = if (updateConfirmActive) "再次确认" else "更新",
+                        enabled = updateEnabled,
+                        accentColor = LukoaColors.Amber,
+                        modifier = Modifier
+                            .weight(1f),
+                        onClick = onTavernUpdate,
+                    )
+                    SecondaryActionButton(
+                        text = if (rollbackConfirmActive) "再次确认" else "回退",
+                        enabled = rollbackEnabled,
+                        accentColor = LukoaColors.Amber,
+                        modifier = Modifier
+                            .weight(1f),
+                        onClick = onTavernRollback,
+                    )
                 }
-            } else {
+
                 Text(
-                    text = "点下面按钮读取当前酒馆版本。",
+                    text = if (tavernVersionInfo.notInstalled) {
+                        "未安装时不能更新或回退，先安装酒馆。"
+                    } else {
+                        "只切换程序版本，不删聊天、角色、世界书和插件。"
+                    },
                     color = LukoaColors.Muted,
                     style = MaterialTheme.typography.bodySmall,
                 )
             }
-        }
-
-        SectionPanel(title = "目标版本与切换", accentColor = LukoaColors.Accent) {
-            Text(
-                text = when {
-                    tavernVersionInfo.hasData -> "先读取列表，再选目标版本。"
-                    tavernVersionInfo.notInstalled -> "酒馆未安装，也可以先读取官方版本给安装使用。"
-                    else -> "可以先读取官方版本；更新或回退前再检测当前版本。"
-                },
-                color = LukoaColors.Muted,
-                style = MaterialTheme.typography.bodySmall,
-            )
-
-            OfficialVersionChooser(
-                title = "官方版本下拉框",
-                officialVersions = versionManagementChoices,
-                selectedVersion = selectedVersion,
-                actionsLocked = actionsLocked,
-                refreshEnabled = !actionsLocked,
-                emptyStateText = if (officialVersions.hasData) {
-                    "当前版本已经隐藏，暂时没有别的官方版本。"
-                } else {
-                    "先读取官方版本"
-                },
-                onRefreshOfficialVersions = onRefreshOfficialVersions,
-                onSelectVersion = onSelectVersion,
-            )
-
-            VersionOperationStatusCard(
-                currentVersionInfo = tavernVersionInfo,
-                selectedVersion = selectedVersion,
-                actionState = actionState,
-                disabledReasons = disabledReasons,
-            )
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                SecondaryActionButton(
-                    text = if (updateConfirmActive) "再次确认" else "更新",
-                    enabled = updateEnabled,
-                    accentColor = LukoaColors.Amber,
-                    modifier = Modifier
-                        .weight(1f),
-                    onClick = onTavernUpdate,
-                )
-                SecondaryActionButton(
-                    text = if (rollbackConfirmActive) "再次确认" else "回退",
-                    enabled = rollbackEnabled,
-                    accentColor = LukoaColors.Amber,
-                    modifier = Modifier
-                        .weight(1f),
-                    onClick = onTavernRollback,
-                )
-            }
-
-            Text(
-                text = if (tavernVersionInfo.notInstalled) {
-                    "未安装时不能更新或回退，先安装酒馆。"
-                } else {
-                    "只切换程序版本，不删聊天、角色、世界书和插件。"
-                },
-                color = LukoaColors.Muted,
-                style = MaterialTheme.typography.bodySmall,
-            )
         }
     }
 }
@@ -2258,6 +2297,43 @@ fun SettingsSection(
     var showPermissionCenterDialog by remember { mutableStateOf(false) }
     var showUpdateSettingsDialog by remember { mutableStateOf(false) }
     var showWakeDelayDialog by remember { mutableStateOf(false) }
+    var selectedView by remember {
+        mutableStateOf(
+            if (permissionReadyCount >= 5) SettingsPageView.Mirror else SettingsPageView.Permissions,
+        )
+    }
+    val sectionOptions = listOf(
+        SectionSwitchOption(
+            value = SettingsPageView.Path,
+            label = "路径",
+            description = "管理酒馆目录路径，适合文件夹名不是默认 SillyTavern 的情况。",
+        ),
+        SectionSwitchOption(
+            value = SettingsPageView.Mirror,
+            label = "网络",
+            description = "切 GitHub 源、npm 源和 Termux 包源，主要处理国内网络和镜像问题。",
+        ),
+        SectionSwitchOption(
+            value = SettingsPageView.Permissions,
+            label = "权限",
+            description = "集中看 RUN_COMMAND、外部调用、后台运行、文件和安装权限。",
+        ),
+        SectionSwitchOption(
+            value = SettingsPageView.Update,
+            label = "更新",
+            description = "这里只管启动器 APK 的 GitHub 更新，不是酒馆版本更新。",
+        ),
+        SectionSwitchOption(
+            value = SettingsPageView.Diagnostic,
+            label = "诊断",
+            description = "导出诊断日志，或者清启动器里的显示日志，方便查 bug。",
+        ),
+        SectionSwitchOption(
+            value = SettingsPageView.Wake,
+            label = "唤醒",
+            description = "调整唤醒 Termux 后多久自动切回来。",
+        ),
+    )
 
     if (showPathSettingsDialog) {
         TavernPathSettingsDialog(
@@ -2333,250 +2409,257 @@ fun SettingsSection(
             permissionSummaryColor = permissionSummaryColor,
             githubUpdateState = githubUpdateState,
         )
-
-        SectionPanel(title = "酒馆路径", accentColor = LukoaColors.Accent) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                StatusPill(
-                    text = if (pathIsDefault) "默认路径" else "已自定义",
-                    active = !pathIsDefault,
-                    modifier = Modifier.weight(1f),
-                    toneColor = if (pathIsDefault) LukoaColors.Muted else LukoaColors.Accent,
-                    activeBackground = LukoaColors.AccentSoft,
-                )
-                StatusPill(
-                    text = if (actionsLocked) "当前忙碌中" else "可调整",
-                    active = !actionsLocked,
-                    modifier = Modifier.weight(1f),
-                    toneColor = if (actionsLocked) LukoaColors.Amber else LukoaColors.Accent,
-                    activeBackground = if (actionsLocked) LukoaColors.AmberSoft else LukoaColors.AccentSoft,
-                )
-            }
-            Text(
-                text = tavernPathConfig.displayTavernDir,
-                color = LukoaColors.Text,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Text(
-                text = "默认目录是 ~/SillyTavern。只有你改过酒馆文件夹名，或者酒馆不在默认目录时，才需要改这里。",
-                color = LukoaColors.Muted,
-                style = MaterialTheme.typography.bodySmall,
-            )
-            if (tavernPathInput.isNotBlank() && tavernPathError != null) {
-                Text(
-                    text = tavernPathError,
-                    color = LukoaColors.Danger,
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
-            SecondaryActionButton(
-                text = "管理路径",
-                enabled = true,
-                accentColor = LukoaColors.Accent,
-                modifier = Modifier.fillMaxWidth(),
-                onClick = { showPathSettingsDialog = true },
-            )
-        }
-
-        MirrorSettingsSection(
-            tavernMirrorConfig = tavernMirrorConfig,
-            tavernRepoInput = tavernRepoInput,
-            npmRegistryInput = npmRegistryInput,
-            mirrorProbeStatus = mirrorProbeStatus,
-            termuxRepoStatus = termuxRepoStatus,
-            customTermuxRepoInput = customTermuxRepoInput,
-            actionsLocked = actionsLocked,
-            onTavernRepoInputChange = onTavernRepoInputChange,
-            onNpmRegistryInputChange = onNpmRegistryInputChange,
-            onCustomTermuxRepoInputChange = onCustomTermuxRepoInputChange,
-            onSaveTavernMirror = onSaveTavernMirror,
-            onUseOfficialMirror = onUseOfficialMirror,
-            onUseGithubProxyMirror = onUseGithubProxyMirror,
-            onUseNpmMirror = onUseNpmMirror,
-            onCheckTavernMirror = onCheckTavernMirror,
-            onReadTermuxRepoStatus = onReadTermuxRepoStatus,
-            onApplyCustomTermuxMirror = onApplyCustomTermuxMirror,
+        SectionSwitcherCard(
+            title = "设置分区",
+            options = sectionOptions,
+            selected = selectedView,
+            onSelect = { selectedView = it },
         )
 
-        SectionPanel(title = "权限与授权", accentColor = LukoaColors.Accent) {
-            Text(
-                text = "把启动器会用到的权限和授权都集中在这里。看不准时，先把没准备好的项目逐个补齐。",
-                color = LukoaColors.Muted,
-                style = MaterialTheme.typography.bodySmall,
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                StatusPill(
-                    text = if (runCommandPermissionGranted) "RUN_COMMAND 已允许" else "RUN_COMMAND 未允许",
-                    active = runCommandPermissionGranted,
-                    modifier = Modifier.weight(1f),
+        when (selectedView) {
+            SettingsPageView.Path -> SectionPanel(title = "酒馆路径", accentColor = LukoaColors.Accent) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    StatusPill(
+                        text = if (pathIsDefault) "默认路径" else "已自定义",
+                        active = !pathIsDefault,
+                        modifier = Modifier.weight(1f),
+                        toneColor = if (pathIsDefault) LukoaColors.Muted else LukoaColors.Accent,
+                        activeBackground = LukoaColors.AccentSoft,
+                    )
+                    StatusPill(
+                        text = if (actionsLocked) "当前忙碌中" else "可调整",
+                        active = !actionsLocked,
+                        modifier = Modifier.weight(1f),
+                        toneColor = if (actionsLocked) LukoaColors.Amber else LukoaColors.Accent,
+                        activeBackground = if (actionsLocked) LukoaColors.AmberSoft else LukoaColors.AccentSoft,
+                    )
+                }
+                Text(
+                    text = tavernPathConfig.displayTavernDir,
+                    color = LukoaColors.Text,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
                 )
-                StatusPill(
-                    text = if (termuxExternalAppsReady) "外部调用已开启" else "外部调用未开启",
-                    active = termuxExternalAppsReady,
-                    modifier = Modifier.weight(1f),
+                Text(
+                    text = "默认目录是 ~/SillyTavern。只有你改过酒馆文件夹名，或者酒馆不在默认目录时，才需要改这里。",
+                    color = LukoaColors.Muted,
+                    style = MaterialTheme.typography.bodySmall,
                 )
-            }
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                StatusPill(
-                    text = if (backgroundRunPermissionGranted) "后台运行已允许" else "后台运行未允许",
-                    active = backgroundRunPermissionGranted,
-                    modifier = Modifier.weight(1f),
-                )
-                StatusPill(
-                    text = if (allFilesAccessGranted) "文件权限已允许" else "文件权限未允许",
-                    active = allFilesAccessGranted,
-                    modifier = Modifier.weight(1f),
-                )
-            }
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                StatusPill(
-                    text = if (installUnknownAppsGranted) "安装权限已允许" else "安装权限未允许",
-                    active = installUnknownAppsGranted,
-                    modifier = Modifier.weight(1f),
-                )
-                StatusPill(
-                    text = if (termuxStoragePermissionBlocked) "Termux 存储待处理" else "Termux 存储按需申请",
-                    active = !termuxStoragePermissionBlocked,
-                    modifier = Modifier.weight(1f),
-                    toneColor = if (termuxStoragePermissionBlocked) LukoaColors.Amber else LukoaColors.Muted,
-                    activeBackground = if (termuxStoragePermissionBlocked) LukoaColors.AmberSoft else LukoaColors.SurfaceAlt,
-                )
-            }
-            SecondaryActionButton(
-                text = "查看权限详情",
-                enabled = true,
-                accentColor = LukoaColors.Accent,
-                modifier = Modifier.fillMaxWidth(),
-                onClick = { showPermissionCenterDialog = true },
-            )
-        }
-
-        SectionPanel(title = "应用更新", accentColor = LukoaColors.Accent) {
-            Text(
-                text = "这里管理的是启动器更新，不是酒馆版本更新。",
-                color = LukoaColors.Muted,
-                style = MaterialTheme.typography.bodySmall,
-            )
-            GithubUpdateStatusCard(githubUpdateState)
-            VersionInfoLine("当前仓库", repositoryInput.ifBlank { "未配置" })
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
+                if (tavernPathInput.isNotBlank() && tavernPathError != null) {
+                    Text(
+                        text = tavernPathError,
+                        color = LukoaColors.Danger,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
                 SecondaryActionButton(
-                    text = "管理更新设置",
+                    text = "管理路径",
                     enabled = true,
                     accentColor = LukoaColors.Accent,
-                    modifier = Modifier.weight(1f),
-                    onClick = { showUpdateSettingsDialog = true },
-                )
-                SecondaryActionButton(
-                    text = when {
-                        githubUpdateState.checking -> "检查中..."
-                        githubUpdateState.downloading -> "下载中..."
-                        else -> "检查更新"
-                    },
-                    enabled = !githubUpdateState.checking && !githubUpdateState.downloading,
-                    accentColor = LukoaColors.Accent,
-                    modifier = Modifier.weight(1f),
-                    onClick = onCheckUpdate,
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = { showPathSettingsDialog = true },
                 )
             }
-            if (githubUpdateState.hasUpdate || githubUpdateState.latest?.releaseUrl?.isNotBlank() == true) {
+
+            SettingsPageView.Mirror -> MirrorSettingsSection(
+                tavernMirrorConfig = tavernMirrorConfig,
+                tavernRepoInput = tavernRepoInput,
+                npmRegistryInput = npmRegistryInput,
+                mirrorProbeStatus = mirrorProbeStatus,
+                termuxRepoStatus = termuxRepoStatus,
+                customTermuxRepoInput = customTermuxRepoInput,
+                actionsLocked = actionsLocked,
+                onTavernRepoInputChange = onTavernRepoInputChange,
+                onNpmRegistryInputChange = onNpmRegistryInputChange,
+                onCustomTermuxRepoInputChange = onCustomTermuxRepoInputChange,
+                onSaveTavernMirror = onSaveTavernMirror,
+                onUseOfficialMirror = onUseOfficialMirror,
+                onUseGithubProxyMirror = onUseGithubProxyMirror,
+                onUseNpmMirror = onUseNpmMirror,
+                onCheckTavernMirror = onCheckTavernMirror,
+                onReadTermuxRepoStatus = onReadTermuxRepoStatus,
+                onApplyCustomTermuxMirror = onApplyCustomTermuxMirror,
+            )
+
+            SettingsPageView.Permissions -> SectionPanel(title = "权限与授权", accentColor = LukoaColors.Accent) {
+                Text(
+                    text = "把启动器会用到的权限和授权都集中在这里。看不准时，先把没准备好的项目逐个补齐。",
+                    color = LukoaColors.Muted,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    StatusPill(
+                        text = if (runCommandPermissionGranted) "RUN_COMMAND 已允许" else "RUN_COMMAND 未允许",
+                        active = runCommandPermissionGranted,
+                        modifier = Modifier.weight(1f),
+                    )
+                    StatusPill(
+                        text = if (termuxExternalAppsReady) "外部调用已开启" else "外部调用未开启",
+                        active = termuxExternalAppsReady,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    StatusPill(
+                        text = if (backgroundRunPermissionGranted) "后台运行已允许" else "后台运行未允许",
+                        active = backgroundRunPermissionGranted,
+                        modifier = Modifier.weight(1f),
+                    )
+                    StatusPill(
+                        text = if (allFilesAccessGranted) "文件权限已允许" else "文件权限未允许",
+                        active = allFilesAccessGranted,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    StatusPill(
+                        text = if (installUnknownAppsGranted) "安装权限已允许" else "安装权限未允许",
+                        active = installUnknownAppsGranted,
+                        modifier = Modifier.weight(1f),
+                    )
+                    StatusPill(
+                        text = if (termuxStoragePermissionBlocked) "Termux 存储待处理" else "Termux 存储按需申请",
+                        active = !termuxStoragePermissionBlocked,
+                        modifier = Modifier.weight(1f),
+                        toneColor = if (termuxStoragePermissionBlocked) LukoaColors.Amber else LukoaColors.Muted,
+                        activeBackground = if (termuxStoragePermissionBlocked) LukoaColors.AmberSoft else LukoaColors.SurfaceAlt,
+                    )
+                }
+                SecondaryActionButton(
+                    text = "查看权限详情",
+                    enabled = true,
+                    accentColor = LukoaColors.Accent,
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = { showPermissionCenterDialog = true },
+                )
+            }
+
+            SettingsPageView.Update -> SectionPanel(title = "应用更新", accentColor = LukoaColors.Accent) {
+                Text(
+                    text = "这里管理的是启动器更新，不是酒馆版本更新。",
+                    color = LukoaColors.Muted,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                GithubUpdateStatusCard(githubUpdateState)
+                VersionInfoLine("当前仓库", repositoryInput.ifBlank { "未配置" })
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
-                    if (githubUpdateState.hasUpdate) {
-                        SecondaryActionButton(
-                            text = "查看新版",
-                            enabled = !updateLocked,
-                            accentColor = LukoaColors.Accent,
-                            modifier = Modifier.weight(1f),
-                            onClick = onInstallUpdate,
-                        )
-                    }
-                    if (githubUpdateState.latest?.releaseUrl?.isNotBlank() == true) {
-                        SecondaryActionButton(
-                            text = "打开发布页",
-                            enabled = !updateLocked,
-                            accentColor = LukoaColors.Accent,
-                            modifier = Modifier.weight(1f),
-                            onClick = onOpenRelease,
-                        )
+                    SecondaryActionButton(
+                        text = "管理更新设置",
+                        enabled = true,
+                        accentColor = LukoaColors.Accent,
+                        modifier = Modifier.weight(1f),
+                        onClick = { showUpdateSettingsDialog = true },
+                    )
+                    SecondaryActionButton(
+                        text = when {
+                            githubUpdateState.checking -> "检查中..."
+                            githubUpdateState.downloading -> "下载中..."
+                            else -> "检查更新"
+                        },
+                        enabled = !githubUpdateState.checking && !githubUpdateState.downloading,
+                        accentColor = LukoaColors.Accent,
+                        modifier = Modifier.weight(1f),
+                        onClick = onCheckUpdate,
+                    )
+                }
+                if (githubUpdateState.hasUpdate || githubUpdateState.latest?.releaseUrl?.isNotBlank() == true) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        if (githubUpdateState.hasUpdate) {
+                            SecondaryActionButton(
+                                text = "查看新版",
+                                enabled = !updateLocked,
+                                accentColor = LukoaColors.Accent,
+                                modifier = Modifier.weight(1f),
+                                onClick = onInstallUpdate,
+                            )
+                        }
+                        if (githubUpdateState.latest?.releaseUrl?.isNotBlank() == true) {
+                            SecondaryActionButton(
+                                text = "打开发布页",
+                                enabled = !updateLocked,
+                                accentColor = LukoaColors.Accent,
+                                modifier = Modifier.weight(1f),
+                                onClick = onOpenRelease,
+                            )
+                        }
                     }
                 }
             }
-        }
 
-        SectionPanel(title = "诊断与日志", accentColor = LukoaColors.Accent) {
-            Text(
-                text = "诊断日志适合发给我查 bug。清除日志只会清启动器里的显示，不会去删你酒馆目录里的文件。",
-                color = LukoaColors.Muted,
-                style = MaterialTheme.typography.bodySmall,
-            )
-            SecondaryActionButton(
-                text = "清除日志",
-                enabled = !actionsLocked,
-                accentColor = LukoaColors.Accent,
-                modifier = Modifier.fillMaxWidth(),
-                onClick = onClearLogs,
-            )
-            SecondaryActionButton(
-                text = "导出诊断日志",
-                enabled = !actionsLocked,
-                accentColor = LukoaColors.Accent,
-                modifier = Modifier.fillMaxWidth(),
-                onClick = onExportDiagnostic,
-            )
-        }
-
-        SectionPanel(title = "Termux 唤醒", accentColor = LukoaColors.Accent) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                StatusPill(
-                    text = "${"%.1f".format(termuxReturnDelayMs / 1000f)} 秒返回",
-                    active = true,
-                    modifier = Modifier.weight(1f),
+            SettingsPageView.Diagnostic -> SectionPanel(title = "诊断与日志", accentColor = LukoaColors.Accent) {
+                Text(
+                    text = "诊断日志适合发给我查 bug。清除日志只会清启动器里的显示，不会去删你酒馆目录里的文件。",
+                    color = LukoaColors.Muted,
+                    style = MaterialTheme.typography.bodySmall,
                 )
-                StatusPill(
-                    text = if (actionsLocked) "当前忙碌中" else "可调整",
-                    active = !actionsLocked,
-                    modifier = Modifier.weight(1f),
-                    toneColor = if (actionsLocked) LukoaColors.Amber else LukoaColors.Accent,
-                    activeBackground = if (actionsLocked) LukoaColors.AmberSoft else LukoaColors.AccentSoft,
+                SecondaryActionButton(
+                    text = "清除日志",
+                    enabled = !actionsLocked,
+                    accentColor = LukoaColors.Accent,
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = onClearLogs,
+                )
+                SecondaryActionButton(
+                    text = "导出诊断日志",
+                    enabled = !actionsLocked,
+                    accentColor = LukoaColors.Accent,
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = onExportDiagnostic,
                 )
             }
-            Text(
-                text = "这里只管唤醒 Termux 后多久自动跳回来。时间太短时，有些手机可能还没来得及唤醒完成。",
-                color = LukoaColors.Muted,
-                style = MaterialTheme.typography.bodySmall,
-            )
-            SecondaryActionButton(
-                text = "调整返回时间",
-                enabled = true,
-                accentColor = LukoaColors.Accent,
-                modifier = Modifier.fillMaxWidth(),
-                onClick = { showWakeDelayDialog = true },
-            )
-        }
 
+            SettingsPageView.Wake -> SectionPanel(title = "Termux 唤醒", accentColor = LukoaColors.Accent) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    StatusPill(
+                        text = "${"%.1f".format(termuxReturnDelayMs / 1000f)} 秒返回",
+                        active = true,
+                        modifier = Modifier.weight(1f),
+                    )
+                    StatusPill(
+                        text = if (actionsLocked) "当前忙碌中" else "可调整",
+                        active = !actionsLocked,
+                        modifier = Modifier.weight(1f),
+                        toneColor = if (actionsLocked) LukoaColors.Amber else LukoaColors.Accent,
+                        activeBackground = if (actionsLocked) LukoaColors.AmberSoft else LukoaColors.AccentSoft,
+                    )
+                }
+                Text(
+                    text = "这里只管唤醒 Termux 后多久自动跳回来。时间太短时，有些手机可能还没来得及唤醒完成。",
+                    color = LukoaColors.Muted,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                SecondaryActionButton(
+                    text = "调整返回时间",
+                    enabled = true,
+                    accentColor = LukoaColors.Accent,
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = { showWakeDelayDialog = true },
+                )
+            }
+        }
     }
 }
 

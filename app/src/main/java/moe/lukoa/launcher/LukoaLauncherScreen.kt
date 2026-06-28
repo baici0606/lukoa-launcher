@@ -3,7 +3,6 @@ package moe.lukoa.launcher
 import android.os.Environment
 import android.os.SystemClock
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Arrangement
@@ -29,9 +28,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
@@ -215,10 +212,6 @@ fun LukoaLauncherScreen(
     var startupRefreshToken by remember { mutableIntStateOf(0) }
     var startupGithubCheckPending by remember { mutableStateOf(false) }
     var selectedTab by remember { mutableStateOf(LauncherTab.Launch) }
-    val density = LocalDensity.current
-    val pagerSwipeThresholdPx = remember(density) {
-        with(density) { 56.dp.toPx() }
-    }
     val pagerState = rememberPagerState(
         initialPage = selectedTab.ordinal,
         pageCount = { LauncherTab.entries.size },
@@ -2570,48 +2563,11 @@ fun LukoaLauncherScreen(
         HorizontalPager(
             state = pagerState,
             modifier = Modifier
-                .weight(1f)
-                .pointerInput(pagerState.currentPage, pagerSwipeThresholdPx) {
-                    var accumulatedDragX = 0f
-                    detectHorizontalDragGestures(
-                        onDragStart = {
-                            accumulatedDragX = 0f
-                        },
-                        onHorizontalDrag = { change, dragAmount ->
-                            accumulatedDragX += dragAmount
-                            change.consume()
-                        },
-                        onDragEnd = {
-                            val currentPage = pagerState.currentPage
-                            val direction = when {
-                                accumulatedDragX <= -pagerSwipeThresholdPx -> 1
-                                accumulatedDragX >= pagerSwipeThresholdPx -> -1
-                                else -> 0
-                            }
-                            val targetPage = (currentPage + direction)
-                                .coerceIn(0, LauncherTab.entries.lastIndex)
-                            if (direction != 0 && targetPage != currentPage) {
-                                scope.launch {
-                                    pagerState.animateScrollToPage(
-                                        page = targetPage,
-                                        animationSpec = tween(
-                                            durationMillis = 280,
-                                            easing = FastOutSlowInEasing,
-                                        ),
-                                    )
-                                }
-                            }
-                            accumulatedDragX = 0f
-                        },
-                        onDragCancel = {
-                            accumulatedDragX = 0f
-                        },
-                    )
-                },
+                .weight(1f),
             beyondViewportPageCount = 1,
-            pageSpacing = 8.dp,
-            contentPadding = PaddingValues(horizontal = 4.dp),
-            userScrollEnabled = false,
+            pageSpacing = 6.dp,
+            contentPadding = PaddingValues(horizontal = 2.dp),
+            userScrollEnabled = true,
         ) { page ->
             val tab = LauncherTab.entries[page]
             val pageOffset = (
