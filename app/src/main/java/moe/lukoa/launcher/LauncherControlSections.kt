@@ -42,6 +42,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 enum class LauncherTab(
     val label: String,
@@ -2199,13 +2202,16 @@ fun UpdateAvailableDialog(
     downloading: Boolean,
     onInstall: () -> Unit,
     onOpenRelease: () -> Unit,
-    onIgnore: () -> Unit,
+    onClearBadge: () -> Unit,
     onDismiss: () -> Unit,
 ) {
+    val publishedText = remember(updateInfo.publishedAt) {
+        formatGithubPublishedTime(updateInfo.publishedAt)
+    }
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = LukoaColors.Surface,
-        titleContentColor = LukoaColors.Amber,
+        titleContentColor = LukoaColors.Accent,
         textContentColor = LukoaColors.Text,
         title = {
             Text("发现新版本 v${updateInfo.versionName}")
@@ -2217,6 +2223,13 @@ fun UpdateAvailableDialog(
                     color = LukoaColors.Muted,
                     style = MaterialTheme.typography.bodySmall,
                 )
+                if (publishedText.isNotBlank()) {
+                    Text(
+                        text = "发布时间 $publishedText",
+                        color = LukoaColors.Muted,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
                 if (updateInfo.releaseName.isNotBlank() && updateInfo.releaseName != updateInfo.tagName) {
                     Text(
                         text = updateInfo.releaseName,
@@ -2245,6 +2258,11 @@ fun UpdateAvailableDialog(
                         style = MaterialTheme.typography.bodySmall,
                     )
                 }
+                Text(
+                    text = "清除红点后，这个版本不会再自动弹出提醒，但你之后仍然可以手动点右上角版本查看。",
+                    color = LukoaColors.Muted,
+                    style = MaterialTheme.typography.bodySmall,
+                )
             }
         },
         confirmButton = {
@@ -2255,18 +2273,31 @@ fun UpdateAvailableDialog(
                     else -> "立即更新"
                 },
                 enabled = !downloading,
-                tone = ActionTone.Warning,
+                tone = ActionTone.Safe,
                 onClick = onInstall,
             )
         },
         dismissButton = {
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                DialogActionButton("不再提示", tone = ActionTone.Warning, onClick = onIgnore)
-                DialogActionButton("取消", tone = ActionTone.Warning, onClick = onDismiss)
-                DialogActionButton("详情", tone = ActionTone.Warning, onClick = onOpenRelease)
+                DialogActionButton("清除红点", tone = ActionTone.Neutral, onClick = onClearBadge)
+                DialogActionButton("稍后", tone = ActionTone.Neutral, onClick = onDismiss)
+                DialogActionButton("详情", tone = ActionTone.Neutral, onClick = onOpenRelease)
             }
         },
     )
+}
+
+private val GITHUB_UPDATE_TIME_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
+
+private fun formatGithubPublishedTime(text: String): String {
+    if (text.isBlank()) return ""
+    return runCatching {
+        GITHUB_UPDATE_TIME_FORMATTER.format(
+            Instant.parse(text).atZone(ZoneId.systemDefault()),
+        )
+    }.getOrElse {
+        text.replace("T", " ").removeSuffix("Z").take(16)
+    }
 }
 
 @Composable

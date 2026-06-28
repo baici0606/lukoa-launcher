@@ -1,5 +1,6 @@
 package moe.lukoa.launcher
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -44,8 +45,11 @@ import kotlinx.coroutines.launch
 fun Header(
     tavernRunning: Boolean,
     tavernStarting: Boolean,
+    showVersionUpdateBadge: Boolean,
+    onVersionClick: () -> Unit,
 ) {
     val context = LocalContext.current
+    val feedbackVersionClick = rememberFeedbackClick(onVersionClick)
     val versionName = try {
         context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "..."
     } catch (_: Exception) {
@@ -106,16 +110,46 @@ fun Header(
                 }
             }
             Surface(
-                color = LukoaColors.SurfaceAlt,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .clickable(onClick = feedbackVersionClick),
+                color = if (showVersionUpdateBadge) {
+                    LukoaColors.DangerSoft.copy(alpha = 0.55f)
+                } else {
+                    LukoaColors.SurfaceAlt
+                },
                 shape = RoundedCornerShape(8.dp),
+                border = BorderStroke(
+                    1.dp,
+                    if (showVersionUpdateBadge) {
+                        LukoaColors.Danger.copy(alpha = 0.5f)
+                    } else {
+                        LukoaColors.Line
+                    },
+                ),
             ) {
-                Text(
-                    text = "v$versionName",
+                Row(
                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                    color = LukoaColors.Muted,
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.SemiBold,
-                )
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Text(
+                        text = "v$versionName",
+                        color = if (showVersionUpdateBadge) LukoaColors.Text else LukoaColors.Muted,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    if (showVersionUpdateBadge) {
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .background(
+                                    color = LukoaColors.Danger,
+                                    shape = RoundedCornerShape(4.dp),
+                                ),
+                        )
+                    }
+                }
             }
         }
     }

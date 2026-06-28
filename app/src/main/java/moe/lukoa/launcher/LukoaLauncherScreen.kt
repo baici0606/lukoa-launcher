@@ -224,6 +224,8 @@ fun LukoaLauncherScreen(
     val actionInProgress = busyLabel != null
     val issueAnalysis = TavernIssueAnalyzer.analyze(termuxLog, status)
     val scope = rememberCoroutineScope()
+    val showGithubUpdateBadge = githubUpdateState.hasUpdate &&
+        githubUpdateState.latest?.tagName != ignoredUpdateTag
     var lastSyncedTermuxResultKey by remember {
         mutableStateOf(onLatestTermuxResult()?.key.orEmpty())
     }
@@ -1767,12 +1769,17 @@ fun LukoaLauncherScreen(
         }
     }
 
-    fun ignoreCurrentGithubUpdate() {
+    fun clearCurrentGithubUpdateBadge() {
         val latest = githubUpdateState.latest ?: return
         ignoredUpdateTag = latest.tagName
         onIgnoreGithubUpdate(latest.tagName)
         showUpdateDialog = false
-        update("已关闭 v${latest.versionName} 的自动提示。", "", true, allowRunningInference = false)
+        update(
+            "已清除 v${latest.versionName} 的更新红点，这个版本不会再自动弹出提醒。",
+            "",
+            true,
+            allowRunningInference = false,
+        )
     }
 
     fun termuxKnownMissing(): Boolean {
@@ -2476,7 +2483,7 @@ fun LukoaLauncherScreen(
                     val result = onOpenGithubRelease(latest)
                     update(result.message, "", result.ok, allowRunningInference = false)
                 },
-                onIgnore = ::ignoreCurrentGithubUpdate,
+                onClearBadge = ::clearCurrentGithubUpdateBadge,
                 onDismiss = { showUpdateDialog = false },
             )
         }
@@ -2497,6 +2504,14 @@ fun LukoaLauncherScreen(
             Header(
                 tavernRunning = tavernRunning,
                 tavernStarting = tavernStarting,
+                showVersionUpdateBadge = showGithubUpdateBadge,
+                onVersionClick = {
+                    if (githubUpdateState.hasUpdate) {
+                        showUpdateDialog = true
+                    } else {
+                        checkGithubUpdate(manual = true)
+                    }
+                },
             )
 
             if (selectedTab != LauncherTab.Launch) {
