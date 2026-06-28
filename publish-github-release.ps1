@@ -98,25 +98,23 @@ function Resolve-ReleaseNotesPath {
         }
 
         $tempPath = Join-Path $env:TEMP ("lukoa-release-notes-{0}.md" -f $Version)
-        $arguments = @(
-            "-ExecutionPolicy", "Bypass",
-            "-File", $generatorScript,
-            "-TargetVersion", $Version,
-            "-OutputFile", $tempPath,
-            "-Format", $AutoNotesFormat
-        )
+        $generatorParams = @{
+            TargetVersion = $Version
+            OutputFile = $tempPath
+            Format = $AutoNotesFormat
+        }
 
         if (-not [string]::IsNullOrWhiteSpace($AutoNotesFromVersion)) {
-            $arguments += @("-FromVersion", $AutoNotesFromVersion)
+            $generatorParams["FromVersion"] = $AutoNotesFromVersion
         }
         if (-not [string]::IsNullOrWhiteSpace($AutoNotesSourcePath)) {
-            $arguments += @("-SourceFile", $AutoNotesSourcePath)
+            $generatorParams["SourceFile"] = $AutoNotesSourcePath
         }
-        foreach ($highlight in $CurrentVersionHighlights) {
-            $arguments += @("-CurrentHighlights", $highlight)
+        if ($CurrentVersionHighlights.Count -gt 0) {
+            $generatorParams["CurrentHighlights"] = $CurrentVersionHighlights
         }
 
-        & powershell @arguments
+        & $generatorScript @generatorParams
         if ($LASTEXITCODE -ne 0) {
             throw "Automatic release note generation failed."
         }
