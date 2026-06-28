@@ -1,5 +1,6 @@
 package moe.lukoa.launcher
 
+import android.view.MotionEvent
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -14,8 +15,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -26,6 +29,7 @@ data class SectionSwitchOption<T>(
     val description: String,
 )
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun <T> SectionSwitcherCard(
     title: String,
@@ -33,11 +37,21 @@ fun <T> SectionSwitcherCard(
     selected: T,
     modifier: Modifier = Modifier,
     accentColor: Color = LukoaColors.Accent,
+    onPagerLockChange: ((Boolean) -> Unit)? = null,
     onSelect: (T) -> Unit,
 ) {
     val selectedOption = options.firstOrNull { it.value == selected } ?: options.first()
     Surface(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .pointerInteropFilter { event ->
+                when (event.actionMasked) {
+                    MotionEvent.ACTION_DOWN -> onPagerLockChange?.invoke(true)
+                    MotionEvent.ACTION_UP,
+                    MotionEvent.ACTION_CANCEL -> onPagerLockChange?.invoke(false)
+                }
+                false
+            },
         color = LukoaColors.Surface,
         shape = RoundedCornerShape(8.dp),
         border = BorderStroke(1.dp, LukoaColors.Line),

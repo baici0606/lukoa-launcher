@@ -743,6 +743,7 @@ fun VersionManagementSection(
     onTavernVersion: () -> Unit,
     onTavernUpdate: () -> Unit,
     onTavernRollback: () -> Unit,
+    onPagerLockChange: (Boolean) -> Unit = {},
 ) {
     val actionState = TavernVersionActionGuards.evaluate(tavernVersionInfo, selectedVersion)
     val versionManagementChoices = TavernVersionSelection.versionManagementChoices(
@@ -784,6 +785,7 @@ fun VersionManagementSection(
             title = "版本分区",
             options = viewOptions,
             selected = selectedView,
+            onPagerLockChange = onPagerLockChange,
             onSelect = { selectedView = it },
         )
 
@@ -2279,6 +2281,7 @@ fun SettingsSection(
     onExportDiagnostic: () -> Unit,
     onDecreaseTermuxReturnDelay: () -> Unit,
     onIncreaseTermuxReturnDelay: () -> Unit,
+    onPagerLockChange: (Boolean) -> Unit = {},
 ) {
     val updateLocked = githubUpdateState.checking || githubUpdateState.downloading
     val tavernPathError = TavernPathValidator.validate(tavernPathInput.trim())
@@ -2413,6 +2416,7 @@ fun SettingsSection(
             title = "设置分区",
             options = sectionOptions,
             selected = selectedView,
+            onPagerLockChange = onPagerLockChange,
             onSelect = { selectedView = it },
         )
 

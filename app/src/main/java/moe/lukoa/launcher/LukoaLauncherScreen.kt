@@ -2,6 +2,7 @@ package moe.lukoa.launcher
 
 import android.os.Environment
 import android.os.SystemClock
+import android.view.MotionEvent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Box
@@ -26,11 +27,19 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Velocity
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.LifecycleOwner
@@ -39,7 +48,10 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.absoluteValue
+import kotlin.math.abs
+import kotlin.math.hypot
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun LukoaLauncherScreen(
     initialState: LauncherUiState,
@@ -212,6 +224,12 @@ fun LukoaLauncherScreen(
     var startupRefreshToken by remember { mutableIntStateOf(0) }
     var startupGithubCheckPending by remember { mutableStateOf(false) }
     var selectedTab by remember { mutableStateOf(LauncherTab.Launch) }
+    var pagerInteractionLocked by remember { mutableStateOf(false) }
+    val viewConfiguration = LocalViewConfiguration.current
+    val pagerAxisGuard = remember(viewConfiguration.touchSlop) {
+        PagerAxisGuardConnection(viewConfiguration.touchSlop)
+    }
+    pagerAxisGuard.interactionLocked = pagerInteractionLocked
     val pagerState = rememberPagerState(
         initialPage = selectedTab.ordinal,
         pageCount = { LauncherTab.entries.size },
@@ -2563,11 +2581,20 @@ fun LukoaLauncherScreen(
         HorizontalPager(
             state = pagerState,
             modifier = Modifier
-                .weight(1f),
+                .weight(1f)
+                .nestedScroll(pagerAxisGuard)
+                .pointerInteropFilter { event ->
+                    when (event.actionMasked) {
+                        MotionEvent.ACTION_DOWN,
+                        MotionEvent.ACTION_UP,
+                        MotionEvent.ACTION_CANCEL -> pagerAxisGuard.reset()
+                    }
+                    false
+                },
             beyondViewportPageCount = 1,
             pageSpacing = 6.dp,
             contentPadding = PaddingValues(horizontal = 2.dp),
-            userScrollEnabled = true,
+            userScrollEnabled = !pagerInteractionLocked,
         ) { page ->
             val tab = LauncherTab.entries[page]
             val pageOffset = (
@@ -2613,7 +2640,9 @@ fun LukoaLauncherScreen(
                     }
 
                     when (tab) {
-                        LauncherTab.Docs -> DocumentationSection()
+                        LauncherTab.Docs -> DocumentationSection(
+                            onPagerLockChange = { pagerInteractionLocked = it },
+                        )
                         LauncherTab.Version -> VersionManagementSection(
                             actionsLocked = actionInProgress,
                             tavernVersionInfo = tavernVersionInfo,
@@ -2634,6 +2663,7 @@ fun LukoaLauncherScreen(
                             },
                             onTavernUpdate = ::requestTavernUpdate,
                             onTavernRollback = ::requestTavernRollback,
+                            onPagerLockChange = { pagerInteractionLocked = it },
                         )
                         LauncherTab.Launch -> {
                             OverviewPanel(
@@ -2755,6 +2785,7 @@ fun LukoaLauncherScreen(
                             onExportBackup = ::exportBackupArchive,
                             onImportBackup = ::pickAndImportExternalBackup,
                             onCopyBackupLibraryPath = ::copyBackupLibraryPath,
+                            onPagerLockChange = { pagerInteractionLocked = it },
                         )
                         LauncherTab.Settings -> SettingsSection(
                             termuxReturnDelayMs = termuxReturnDelayMs,
@@ -2861,6 +2892,7 @@ fun LukoaLauncherScreen(
                             onIncreaseTermuxReturnDelay = {
                                 updateTermuxReturnDelay(termuxReturnDelayMs + 100L)
                             },
+                            onPagerLockChange = { pagerInteractionLocked = it },
                         )
                     }
                 }
@@ -2871,6 +2903,53 @@ fun LukoaLauncherScreen(
             selectedTab = selectedTab,
             onSelectTab = { selectedTab = it },
         )
+    }
+}
+
+private class PagerAxisGuardConnection(
+    private val touchSlop: Float,
+) : NestedScrollConnection {
+    var interactionLocked: Boolean = false
+
+    private var accumulatedX = 0f
+    private var accumulatedY = 0f
+    private var allowHorizontal: Boolean? = null
+
+    fun reset() {
+        accumulatedX = 0f
+        accumulatedY = 0f
+        allowHorizontal = null
+    }
+
+    override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+        if (interactionLocked || source != NestedScrollSource.UserInput) return Offset.Zero
+        if (allowHorizontal == null) {
+            accumulatedX += available.x
+            accumulatedY += available.y
+            if (hypot(accumulatedX.toDouble(), accumulatedY.toDouble()) >= touchSlop.toDouble()) {
+                val horizontalDistance = abs(accumulatedX)
+                val verticalDistance = abs(accumulatedY)
+                allowHorizontal =
+                    horizontalDistance >= touchSlop * 1.15f &&
+                    horizontalDistance >= verticalDistance * 2f
+            }
+        }
+        return if (allowHorizontal == false) Offset(x = available.x, y = 0f) else Offset.Zero
+    }
+
+    override suspend fun onPreFling(available: Velocity): Velocity {
+        val consumed = if (!interactionLocked && allowHorizontal == false) {
+            Velocity(x = available.x, y = 0f)
+        } else {
+            Velocity.Zero
+        }
+        reset()
+        return consumed
+    }
+
+    override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity {
+        reset()
+        return Velocity.Zero
     }
 }
 

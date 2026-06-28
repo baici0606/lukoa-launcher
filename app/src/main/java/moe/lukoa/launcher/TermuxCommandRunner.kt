@@ -834,8 +834,7 @@ class TermuxCommandRunner(private val context: Context) {
               if [ -z "${'$'}{TAVERN_CANDIDATE_LIST:-}" ]; then
                 TAVERN_CANDIDATE_LIST="${'$'}candidate"
               else
-                TAVERN_CANDIDATE_LIST="${'$'}TAVERN_CANDIDATE_LIST
-${'$'}candidate"
+                TAVERN_CANDIDATE_LIST="${'$'}TAVERN_CANDIDATE_LIST${'$'}(printf '\n%s' "${'$'}candidate")"
               fi
               TAVERN_CANDIDATE_COUNT=${'$'}((TAVERN_CANDIDATE_COUNT + 1))
               if [ -z "${'$'}{TAVERN_CANDIDATE_FIRST:-}" ]; then

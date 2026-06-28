@@ -56,6 +56,7 @@ fun BackupSection(
     onExportBackup: (String) -> Unit,
     onImportBackup: () -> Unit,
     onCopyBackupLibraryPath: (BackupLibraryPathTarget) -> Unit,
+    onPagerLockChange: (Boolean) -> Unit = {},
 ) {
     var showBackupContentDialog by remember { mutableStateOf(false) }
     var showCopyPathDialog by remember { mutableStateOf(false) }
@@ -114,6 +115,7 @@ fun BackupSection(
             title = "备份分区",
             options = sectionOptions,
             selected = selectedView,
+            onPagerLockChange = onPagerLockChange,
             onSelect = { selectedView = it },
         )
 

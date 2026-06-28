@@ -1,5 +1,6 @@
 package moe.lukoa.launcher
 
+import android.view.MotionEvent
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -18,8 +19,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
@@ -32,14 +35,25 @@ private enum class DocCategory(val label: String, val title: String) {
     Troubleshooting("排错", "排错思路"),
 }
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
-fun DocumentationSection() {
+fun DocumentationSection(
+    onPagerLockChange: (Boolean) -> Unit = {},
+) {
     var selectedCategory by remember { mutableStateOf(DocCategory.NewUser) }
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
         SectionPanel(title = "文档导航", accentColor = LukoaColors.Accent) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .pointerInteropFilter { event ->
+                        when (event.actionMasked) {
+                            MotionEvent.ACTION_DOWN -> onPagerLockChange(true)
+                            MotionEvent.ACTION_UP,
+                            MotionEvent.ACTION_CANCEL -> onPagerLockChange(false)
+                        }
+                        false
+                    }
                     .horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
