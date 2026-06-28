@@ -111,6 +111,8 @@ class MainActivity : ComponentActivity() {
             hasRunCommandPermission &&
             loadResult.startupRefreshRequested
         val startupRefreshSignal = if (shouldRunStartupRefresh) 1 else 0
+        val allFilesAccessGranted = hasAllFilesAccessPermission()
+        val installUnknownAppsGranted = canInstallUnknownApps()
         AutoBackupScheduler.syncFromState(
             context = applicationContext,
             enabled = initialState.autoBackupEnabled,
@@ -130,6 +132,8 @@ class MainActivity : ComponentActivity() {
                     initialTermuxInstalled = isTermuxInstalled,
                     initialRunCommandPermissionGranted = hasRunCommandPermission,
                     initialBackgroundRunPermissionGranted = backgroundRunPermissionGranted,
+                    initialAllFilesAccessGranted = allFilesAccessGranted,
+                    initialInstallUnknownAppsGranted = installUnknownAppsGranted,
                     startupRefreshSignal = startupRefreshSignal,
                     onPersistState = stateStore::save,
                     onCommand = { command, update ->
@@ -166,6 +170,8 @@ class MainActivity : ComponentActivity() {
                     onRequestBackgroundRunPermission = {
                         BackgroundRunAccess.request(applicationContext)
                     },
+                    onCheckAllFilesAccessPermission = ::hasAllFilesAccessPermission,
+                    onCheckInstallUnknownAppsPermission = ::canInstallUnknownApps,
                     onConfigureAutoBackupSchedule = { enabled, intervalMinutes, resetCountdown ->
                         AutoBackupScheduler.syncFromState(
                             context = applicationContext,
@@ -175,6 +181,8 @@ class MainActivity : ComponentActivity() {
                         )
                     },
                     onOpenLauncherPermissionSettings = ::openLauncherPermissionSettings,
+                    onOpenAllFilesAccessSettings = ::openAllFilesAccessSettings,
+                    onOpenUnknownAppSourcesSettings = ::openUnknownAppSourcesSettings,
                     onCopyText = ::copyTextToClipboard,
                     onOpenExternalUrl = ::openExternalUrl,
                     onExportLog = { summary, status, termuxLog, appLog, mode, update ->
@@ -410,6 +418,29 @@ class MainActivity : ComponentActivity() {
                 false
             }
         }
+    }
+
+    private fun openUnknownAppSourcesSettings(): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return false
+        return try {
+            startActivity(
+                Intent(
+                    Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                    Uri.parse("package:$packageName"),
+                ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+            )
+            true
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    private fun hasAllFilesAccessPermission(): Boolean {
+        return Build.VERSION.SDK_INT < Build.VERSION_CODES.R || Environment.isExternalStorageManager()
+    }
+
+    private fun canInstallUnknownApps(): Boolean {
+        return Build.VERSION.SDK_INT < Build.VERSION_CODES.O || packageManager.canRequestPackageInstalls()
     }
 
     private fun openExternalUrl(url: String): Boolean {

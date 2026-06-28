@@ -64,45 +64,47 @@ fun LauncherBottomBar(
     onSelectTab: (LauncherTab) -> Unit,
 ) {
     Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .border(1.dp, LukoaColors.Line, RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp)),
+        modifier = Modifier.fillMaxWidth(),
         color = LukoaColors.Surface,
-        shape = RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp),
     ) {
-        NavigationBar(
-            containerColor = LukoaColors.Surface,
-            contentColor = LukoaColors.Text,
-        ) {
-            LauncherTab.entries.forEach { tab ->
-                NavigationBarItem(
-                    selected = selectedTab == tab,
-                    onClick = { onSelectTab(tab) },
-                    icon = {
-                        Text(
-                            text = tab.shortLabel,
-                            fontWeight = FontWeight.Bold,
-                            style = MaterialTheme.typography.labelLarge,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    },
-                    label = {
-                        Text(
-                            text = tab.label,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            fontWeight = if (selectedTab == tab) FontWeight.SemiBold else FontWeight.Normal,
-                        )
-                    },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = LukoaColors.Text,
-                        selectedTextColor = LukoaColors.Text,
-                        indicatorColor = LukoaColors.AccentSoft,
-                        unselectedIconColor = LukoaColors.Muted,
-                        unselectedTextColor = LukoaColors.Muted,
-                    ),
-                )
+        Column {
+            HorizontalDivider(color = LukoaColors.Line)
+            NavigationBar(
+                containerColor = LukoaColors.Surface,
+                contentColor = LukoaColors.Text,
+            ) {
+                LauncherTab.entries.forEach { tab ->
+                    val selected = selectedTab == tab
+                    NavigationBarItem(
+                        selected = selected,
+                        onClick = { onSelectTab(tab) },
+                        icon = {
+                            Text(
+                                text = tab.shortLabel,
+                                fontWeight = if (selected) FontWeight.Bold else FontWeight.SemiBold,
+                                style = MaterialTheme.typography.labelLarge,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        },
+                        label = {
+                            Text(
+                                text = tab.label,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+                                color = if (selected) LukoaColors.Text else LukoaColors.Muted,
+                            )
+                        },
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = LukoaColors.Accent,
+                            selectedTextColor = LukoaColors.Text,
+                            indicatorColor = LukoaColors.SurfaceAlt,
+                            unselectedIconColor = LukoaColors.Muted,
+                            unselectedTextColor = LukoaColors.Muted,
+                        ),
+                    )
+                }
             }
         }
     }
@@ -2189,7 +2191,13 @@ fun ImportBackupDialog(
 @Composable
 fun SettingsSection(
     termuxReturnDelayMs: Long,
+    termuxInstalled: Boolean,
+    runCommandPermissionGranted: Boolean,
     backgroundRunPermissionGranted: Boolean,
+    termuxExternalAppsBlocked: Boolean,
+    termuxStoragePermissionBlocked: Boolean,
+    allFilesAccessGranted: Boolean,
+    installUnknownAppsGranted: Boolean,
     tavernMirrorConfig: TavernMirrorConfig,
     tavernPathConfig: TavernPathConfig,
     tavernRepoInput: String,
@@ -2215,6 +2223,13 @@ fun SettingsSection(
     onReadTermuxRepoStatus: () -> Unit,
     onApplyCustomTermuxMirror: () -> Unit,
     onRequestBackgroundRunPermission: () -> Unit,
+    onRequestRunCommandPermission: () -> Unit,
+    onOpenPermissionSettings: () -> Unit,
+    onCopyExternalAppsCommand: () -> Unit,
+    onOpenTermuxOnly: () -> Unit,
+    onOpenAllFilesAccessSettings: () -> Unit,
+    onOpenUnknownAppSourcesSettings: () -> Unit,
+    onShowTermuxStoragePermissionGuide: () -> Unit,
     onRepositoryInputChange: (String) -> Unit,
     onSaveRepository: () -> Unit,
     onRestoreDefaultRepository: () -> Unit,
@@ -2228,15 +2243,117 @@ fun SettingsSection(
 ) {
     val updateLocked = githubUpdateState.checking || githubUpdateState.downloading
     val tavernPathError = TavernPathValidator.validate(tavernPathInput.trim())
+    val termuxExternalAppsReady = termuxInstalled && !termuxExternalAppsBlocked
+    val permissionReadyCount = listOf(
+        runCommandPermissionGranted,
+        termuxExternalAppsReady,
+        backgroundRunPermissionGranted,
+        allFilesAccessGranted,
+        installUnknownAppsGranted,
+    ).count { it }
+    val permissionSummaryText = "$permissionReadyCount/5 已就绪"
+    val permissionSummaryColor = if (permissionReadyCount >= 4) LukoaColors.Accent else LukoaColors.Amber
+    val pathIsDefault = tavernPathConfig.normalizedTavernDir == TavernPathDefaults.DEFAULT_TAVERN_DIR
+    var showPathSettingsDialog by remember { mutableStateOf(false) }
+    var showPermissionCenterDialog by remember { mutableStateOf(false) }
+    var showUpdateSettingsDialog by remember { mutableStateOf(false) }
+    var showWakeDelayDialog by remember { mutableStateOf(false) }
+
+    if (showPathSettingsDialog) {
+        TavernPathSettingsDialog(
+            tavernPathInput = tavernPathInput,
+            tavernPathError = tavernPathError,
+            displayPathPreview = TavernPathNormalizer.toDisplayPath(
+                TavernPathNormalizer.normalize(tavernPathInput),
+            ),
+            actionsLocked = actionsLocked,
+            onValueChange = onTavernPathInputChange,
+            onSave = {
+                onSaveTavernPath()
+                if (tavernPathError == null) {
+                    showPathSettingsDialog = false
+                }
+            },
+            onRestoreDefault = onRestoreDefaultTavernPath,
+            onDismiss = { showPathSettingsDialog = false },
+        )
+    }
+
+    if (showPermissionCenterDialog) {
+        PermissionCenterDialog(
+            termuxInstalled = termuxInstalled,
+            runCommandPermissionGranted = runCommandPermissionGranted,
+            termuxExternalAppsReady = termuxExternalAppsReady,
+            backgroundRunPermissionGranted = backgroundRunPermissionGranted,
+            allFilesAccessGranted = allFilesAccessGranted,
+            installUnknownAppsGranted = installUnknownAppsGranted,
+            termuxStoragePermissionBlocked = termuxStoragePermissionBlocked,
+            onRequestRunCommandPermission = onRequestRunCommandPermission,
+            onOpenPermissionSettings = onOpenPermissionSettings,
+            onCopyExternalAppsCommand = onCopyExternalAppsCommand,
+            onOpenTermuxOnly = onOpenTermuxOnly,
+            onRequestBackgroundRunPermission = onRequestBackgroundRunPermission,
+            onOpenAllFilesAccessSettings = onOpenAllFilesAccessSettings,
+            onOpenUnknownAppSourcesSettings = onOpenUnknownAppSourcesSettings,
+            onShowTermuxStoragePermissionGuide = onShowTermuxStoragePermissionGuide,
+            onDismiss = { showPermissionCenterDialog = false },
+        )
+    }
+
+    if (showUpdateSettingsDialog) {
+        LauncherUpdateSettingsDialog(
+            repositoryInput = repositoryInput,
+            githubUpdateState = githubUpdateState,
+            actionsLocked = actionsLocked,
+            onRepositoryInputChange = onRepositoryInputChange,
+            onSaveRepository = onSaveRepository,
+            onRestoreDefaultRepository = onRestoreDefaultRepository,
+            onCheckUpdate = onCheckUpdate,
+            onInstallUpdate = onInstallUpdate,
+            onOpenRelease = onOpenRelease,
+            onDismiss = { showUpdateSettingsDialog = false },
+        )
+    }
+
+    if (showWakeDelayDialog) {
+        TermuxWakeDelayDialog(
+            termuxReturnDelayMs = termuxReturnDelayMs,
+            actionsLocked = actionsLocked,
+            onDecrease = onDecreaseTermuxReturnDelay,
+            onIncrease = onIncreaseTermuxReturnDelay,
+            onDismiss = { showWakeDelayDialog = false },
+        )
+    }
+
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
         SettingsOverviewCard(
             tavernPathConfig = tavernPathConfig,
             mirrorProbeStatus = mirrorProbeStatus,
-            backgroundRunPermissionGranted = backgroundRunPermissionGranted,
+            permissionSummaryText = permissionSummaryText,
+            permissionSummaryColor = permissionSummaryColor,
             githubUpdateState = githubUpdateState,
         )
 
         SectionPanel(title = "酒馆路径", accentColor = LukoaColors.Accent) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                StatusPill(
+                    text = if (pathIsDefault) "默认路径" else "已自定义",
+                    active = !pathIsDefault,
+                    modifier = Modifier.weight(1f),
+                    toneColor = if (pathIsDefault) LukoaColors.Muted else LukoaColors.Accent,
+                    activeBackground = LukoaColors.AccentSoft,
+                )
+                StatusPill(
+                    text = if (actionsLocked) "当前忙碌中" else "可调整",
+                    active = !actionsLocked,
+                    modifier = Modifier.weight(1f),
+                    toneColor = if (actionsLocked) LukoaColors.Amber else LukoaColors.Accent,
+                    activeBackground = if (actionsLocked) LukoaColors.AmberSoft else LukoaColors.AccentSoft,
+                )
+            }
             Text(
                 text = tavernPathConfig.displayTavernDir,
                 color = LukoaColors.Text,
@@ -2246,33 +2363,9 @@ fun SettingsSection(
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
-                text = "如果你的文件夹不是 ~/SillyTavern，就在这里改。比如 ~/SillyTavern2。",
+                text = "默认目录是 ~/SillyTavern。只有你改过酒馆文件夹名，或者酒馆不在默认目录时，才需要改这里。",
                 color = LukoaColors.Muted,
                 style = MaterialTheme.typography.bodySmall,
-            )
-            OutlinedTextField(
-                value = tavernPathInput,
-                onValueChange = onTavernPathInputChange,
-                enabled = !actionsLocked,
-                singleLine = true,
-                label = { Text("酒馆目录路径") },
-                placeholder = { Text("~/SillyTavern2") },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(8.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = LukoaColors.Text,
-                    unfocusedTextColor = LukoaColors.Text,
-                    disabledTextColor = LukoaColors.Dim,
-                    focusedContainerColor = LukoaColors.SurfaceAlt,
-                    unfocusedContainerColor = LukoaColors.SurfaceAlt,
-                    disabledContainerColor = LukoaColors.Surface,
-                    focusedBorderColor = LukoaColors.Accent,
-                    unfocusedBorderColor = LukoaColors.Line,
-                    disabledBorderColor = LukoaColors.Line,
-                    focusedLabelColor = LukoaColors.Accent,
-                    unfocusedLabelColor = LukoaColors.Muted,
-                    cursorColor = LukoaColors.Accent,
-                ),
             )
             if (tavernPathInput.isNotBlank() && tavernPathError != null) {
                 Text(
@@ -2281,25 +2374,13 @@ fun SettingsSection(
                     style = MaterialTheme.typography.bodySmall,
                 )
             }
-            Row(
+            SecondaryActionButton(
+                text = "管理路径",
+                enabled = true,
+                accentColor = LukoaColors.Accent,
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                SecondaryActionButton(
-                    text = "保存路径",
-                    enabled = !actionsLocked && tavernPathError == null,
-                    accentColor = LukoaColors.Accent,
-                    modifier = Modifier.weight(1f),
-                    onClick = onSaveTavernPath,
-                )
-                SecondaryActionButton(
-                    text = "恢复默认",
-                    enabled = !actionsLocked,
-                    accentColor = LukoaColors.Accent,
-                    modifier = Modifier.weight(1f),
-                    onClick = onRestoreDefaultTavernPath,
-                )
-            }
+                onClick = { showPathSettingsDialog = true },
+            )
         }
 
         MirrorSettingsSection(
@@ -2322,6 +2403,68 @@ fun SettingsSection(
             onApplyCustomTermuxMirror = onApplyCustomTermuxMirror,
         )
 
+        SectionPanel(title = "权限与授权", accentColor = LukoaColors.Accent) {
+            Text(
+                text = "把启动器会用到的权限和授权都集中在这里。看不准时，先把没准备好的项目逐个补齐。",
+                color = LukoaColors.Muted,
+                style = MaterialTheme.typography.bodySmall,
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                StatusPill(
+                    text = if (runCommandPermissionGranted) "RUN_COMMAND 已允许" else "RUN_COMMAND 未允许",
+                    active = runCommandPermissionGranted,
+                    modifier = Modifier.weight(1f),
+                )
+                StatusPill(
+                    text = if (termuxExternalAppsReady) "外部调用已开启" else "外部调用未开启",
+                    active = termuxExternalAppsReady,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                StatusPill(
+                    text = if (backgroundRunPermissionGranted) "后台运行已允许" else "后台运行未允许",
+                    active = backgroundRunPermissionGranted,
+                    modifier = Modifier.weight(1f),
+                )
+                StatusPill(
+                    text = if (allFilesAccessGranted) "文件权限已允许" else "文件权限未允许",
+                    active = allFilesAccessGranted,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                StatusPill(
+                    text = if (installUnknownAppsGranted) "安装权限已允许" else "安装权限未允许",
+                    active = installUnknownAppsGranted,
+                    modifier = Modifier.weight(1f),
+                )
+                StatusPill(
+                    text = if (termuxStoragePermissionBlocked) "Termux 存储待处理" else "Termux 存储按需申请",
+                    active = !termuxStoragePermissionBlocked,
+                    modifier = Modifier.weight(1f),
+                    toneColor = if (termuxStoragePermissionBlocked) LukoaColors.Amber else LukoaColors.Muted,
+                    activeBackground = if (termuxStoragePermissionBlocked) LukoaColors.AmberSoft else LukoaColors.SurfaceAlt,
+                )
+            }
+            SecondaryActionButton(
+                text = "查看权限详情",
+                enabled = true,
+                accentColor = LukoaColors.Accent,
+                modifier = Modifier.fillMaxWidth(),
+                onClick = { showPermissionCenterDialog = true },
+            )
+        }
+
         SectionPanel(title = "应用更新", accentColor = LukoaColors.Accent) {
             Text(
                 text = "这里管理的是启动器更新，不是酒馆版本更新。",
@@ -2329,65 +2472,30 @@ fun SettingsSection(
                 style = MaterialTheme.typography.bodySmall,
             )
             GithubUpdateStatusCard(githubUpdateState)
-
-            OutlinedTextField(
-                value = repositoryInput,
-                onValueChange = onRepositoryInputChange,
-                enabled = !updateLocked,
-                singleLine = true,
-                label = { Text("GitHub 仓库") },
-                placeholder = { Text("baici0606/lukoa-launcher") },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(8.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = LukoaColors.Text,
-                    unfocusedTextColor = LukoaColors.Text,
-                    disabledTextColor = LukoaColors.Dim,
-                    focusedContainerColor = LukoaColors.SurfaceAlt,
-                    unfocusedContainerColor = LukoaColors.SurfaceAlt,
-                    disabledContainerColor = LukoaColors.Surface,
-                    focusedBorderColor = LukoaColors.Amber,
-                    unfocusedBorderColor = LukoaColors.Line,
-                    disabledBorderColor = LukoaColors.Line,
-                    focusedLabelColor = LukoaColors.Amber,
-                    unfocusedLabelColor = LukoaColors.Muted,
-                    cursorColor = LukoaColors.Amber,
-                ),
-            )
-
+            VersionInfoLine("当前仓库", repositoryInput.ifBlank { "未配置" })
             Row(
-                modifier = Modifier
-                    .fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 SecondaryActionButton(
-                    text = "保存仓库",
-                    enabled = !updateLocked,
+                    text = "管理更新设置",
+                    enabled = true,
                     accentColor = LukoaColors.Accent,
                     modifier = Modifier.weight(1f),
-                    onClick = onSaveRepository,
+                    onClick = { showUpdateSettingsDialog = true },
                 )
                 SecondaryActionButton(
-                    text = "恢复默认",
-                    enabled = !updateLocked,
-                    accentColor = LukoaColors.Amber,
+                    text = when {
+                        githubUpdateState.checking -> "检查中..."
+                        githubUpdateState.downloading -> "下载中..."
+                        else -> "检查更新"
+                    },
+                    enabled = !githubUpdateState.checking && !githubUpdateState.downloading,
+                    accentColor = LukoaColors.Accent,
                     modifier = Modifier.weight(1f),
-                    onClick = onRestoreDefaultRepository,
+                    onClick = onCheckUpdate,
                 )
             }
-
-            SecondaryActionButton(
-                text = when {
-                    githubUpdateState.checking -> "检查中..."
-                    githubUpdateState.downloading -> "下载中..."
-                    else -> "检查更新"
-                },
-                enabled = !updateLocked,
-                accentColor = LukoaColors.Accent,
-                modifier = Modifier.fillMaxWidth(),
-                onClick = onCheckUpdate,
-            )
-
             if (githubUpdateState.hasUpdate || githubUpdateState.latest?.releaseUrl?.isNotBlank() == true) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -2415,32 +2523,9 @@ fun SettingsSection(
             }
         }
 
-        SectionPanel(title = "后台权限", accentColor = LukoaColors.Accent) {
-            StatusPill(
-                text = if (backgroundRunPermissionGranted) "后台运行已允许" else "后台运行未允许",
-                active = backgroundRunPermissionGranted,
-            )
-            Text(
-                text = if (backgroundRunPermissionGranted) {
-                    "自动备份到点后会继续在后台尝试执行。"
-                } else {
-                    "如果这里没放行，自动备份可能要回到软件才会执行。"
-                },
-                color = LukoaColors.Muted,
-                style = MaterialTheme.typography.bodySmall,
-            )
-            SecondaryActionButton(
-                text = if (backgroundRunPermissionGranted) "重新打开权限页" else "去授权",
-                enabled = !actionsLocked,
-                accentColor = LukoaColors.Accent,
-                modifier = Modifier.fillMaxWidth(),
-                onClick = onRequestBackgroundRunPermission,
-            )
-        }
-
         SectionPanel(title = "诊断与日志", accentColor = LukoaColors.Accent) {
             Text(
-                text = "Termux 新日志会自动同步到这里。",
+                text = "诊断日志适合发给我查 bug。清除日志只会清启动器里的显示，不会去删你酒馆目录里的文件。",
                 color = LukoaColors.Muted,
                 style = MaterialTheme.typography.bodySmall,
             )
@@ -2461,20 +2546,37 @@ fun SettingsSection(
         }
 
         SectionPanel(title = "Termux 唤醒", accentColor = LukoaColors.Accent) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                StatusPill(
+                    text = "${"%.1f".format(termuxReturnDelayMs / 1000f)} 秒返回",
+                    active = true,
+                    modifier = Modifier.weight(1f),
+                )
+                StatusPill(
+                    text = if (actionsLocked) "当前忙碌中" else "可调整",
+                    active = !actionsLocked,
+                    modifier = Modifier.weight(1f),
+                    toneColor = if (actionsLocked) LukoaColors.Amber else LukoaColors.Accent,
+                    activeBackground = if (actionsLocked) LukoaColors.AmberSoft else LukoaColors.AccentSoft,
+                )
+            }
             Text(
-                text = "设置唤醒 Termux 后多久返回。",
+                text = "这里只管唤醒 Termux 后多久自动跳回来。时间太短时，有些手机可能还没来得及唤醒完成。",
                 color = LukoaColors.Muted,
                 style = MaterialTheme.typography.bodySmall,
             )
-            BackupStepper(
-                label = "返回等待",
-                value = "${"%.1f".format(termuxReturnDelayMs / 1000f)} 秒",
-                enabled = !actionsLocked,
+            SecondaryActionButton(
+                text = "调整返回时间",
+                enabled = true,
                 accentColor = LukoaColors.Accent,
-                onDecrease = onDecreaseTermuxReturnDelay,
-                onIncrease = onIncreaseTermuxReturnDelay,
+                modifier = Modifier.fillMaxWidth(),
+                onClick = { showWakeDelayDialog = true },
             )
         }
+
     }
 }
 
@@ -2482,7 +2584,8 @@ fun SettingsSection(
 private fun SettingsOverviewCard(
     tavernPathConfig: TavernPathConfig,
     mirrorProbeStatus: TavernMirrorProbeStatus,
-    backgroundRunPermissionGranted: Boolean,
+    permissionSummaryText: String,
+    permissionSummaryColor: Color,
     githubUpdateState: GithubUpdateUiState,
 ) {
     val updateStatusText = when {
@@ -2544,9 +2647,9 @@ private fun SettingsOverviewCard(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 VersionStatusValueCard(
-                    label = "后台运行",
-                    value = if (backgroundRunPermissionGranted) "已允许" else "未允许",
-                    accentColor = if (backgroundRunPermissionGranted) LukoaColors.Accent else LukoaColors.Amber,
+                    label = "权限状态",
+                    value = permissionSummaryText,
+                    accentColor = permissionSummaryColor,
                     modifier = Modifier.weight(1f),
                 )
                 VersionStatusValueCard(
