@@ -1,4 +1,4 @@
-param(
+﻿param(
     [Parameter(Mandatory = $true)]
     [string]$VersionName,
 
@@ -11,6 +11,8 @@ param(
     [switch]$AutoNotes,
     [string]$AutoNotesFrom = "",
     [string]$AutoNotesSource = "",
+    [ValidateSet("Long", "Short")]
+    [string]$AutoNotesMode = "Long",
     [string[]]$CurrentHighlights = @(),
     [string]$AndroidHome = "",
     [switch]$SkipBuild,
@@ -80,6 +82,7 @@ function Resolve-ReleaseNotesPath {
         [bool]$UseAutoNotes,
         [string]$AutoNotesFromVersion,
         [string]$AutoNotesSourcePath,
+        [string]$AutoNotesFormat,
         [string[]]$CurrentVersionHighlights
     )
 
@@ -98,7 +101,8 @@ function Resolve-ReleaseNotesPath {
             "-ExecutionPolicy", "Bypass",
             "-File", $generatorScript,
             "-TargetVersion", $Version,
-            "-OutputFile", $tempPath
+            "-OutputFile", $tempPath,
+            "-Format", $AutoNotesFormat
         )
 
         if (-not [string]::IsNullOrWhiteSpace($AutoNotesFromVersion)) {
@@ -174,6 +178,7 @@ if ($ValidateOnly) {
         projectRoot = $normalizedProjectRoot
         gh = $ghPath
         autoNotes = $AutoNotes
+        autoNotesMode = $AutoNotesMode
     } | ConvertTo-Json
     exit 0
 }
@@ -229,6 +234,7 @@ $notesPath = Resolve-ReleaseNotesPath `
     -UseAutoNotes $AutoNotes.IsPresent `
     -AutoNotesFromVersion $AutoNotesFrom `
     -AutoNotesSourcePath $AutoNotesSource `
+    -AutoNotesFormat $AutoNotesMode `
     -CurrentVersionHighlights $CurrentHighlights
 $title = if ([string]::IsNullOrWhiteSpace($ReleaseTitle)) { $tagName } else { $ReleaseTitle }
 
@@ -247,3 +253,4 @@ if ($LASTEXITCODE -eq 0) {
     tag = $tagName
     apk = $releaseApkPath
 } | ConvertTo-Json
+

@@ -85,6 +85,12 @@ powershell -ExecutionPolicy Bypass -File .\publish-github-release.ps1 -VersionNa
 powershell -ExecutionPolicy Bypass -File .\publish-github-release.ps1 -VersionName 0.8.20 -VersionCode 150 -AutoNotes
 ```
 
+自动生成适合发群或发频道的短公告：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\publish-github-release.ps1 -VersionName 0.8.20 -VersionCode 150 -AutoNotes -AutoNotesMode Short
+```
+
 如果你想明确指定“从哪个旧版本开始写到现在”，可以加：
 
 ```powershell
@@ -95,6 +101,18 @@ powershell -ExecutionPolicy Bypass -File .\publish-github-release.ps1 -VersionNa
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\publish-github-release.ps1 -VersionName 0.8.20 -VersionCode 150 -AutoNotes -CurrentHighlights "补齐多酒馆目录选择" -CurrentHighlights "安装前预检接入镜像源检测"
+```
+
+单独预览自动生成的长公告：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\generate-release-notes.ps1 -TargetVersion 0.8.20 -FromVersion 0.5.5
+```
+
+单独预览自动生成的短公告：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\generate-release-notes.ps1 -TargetVersion 0.8.20 -FromVersion 0.5.5 -Format Short
 ```
 
 只改版本号和发版文案、跳过重新构建：

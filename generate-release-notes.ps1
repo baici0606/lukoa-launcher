@@ -5,7 +5,9 @@
     [string]$FromVersion = "",
     [string]$SourceFile = "",
     [string]$OutputFile = "",
-    [string[]]$CurrentHighlights = @()
+    [string[]]$CurrentHighlights = @(),
+    [ValidateSet("Long", "Short")]
+    [string]$Format = "Long"
 )
 
 $ErrorActionPreference = "Stop"
@@ -174,6 +176,36 @@ function Build-TrainSection {
     return $builder.ToString()
 }
 
+function Build-ShortTrainLine {
+    param(
+        [string]$Train,
+        [object]$RepresentativeSection
+    )
+
+    $lines = $RepresentativeSection.Body -split "`r?`n"
+    $bullets = Get-SectionBullets $lines
+    $summaryParts = @($bullets | Select-Object -First 3)
+
+    if ($summaryParts.Count -eq 0) {
+        $descriptor = Get-SectionDescriptor $lines
+        if ($descriptor) {
+            $summaryParts = @($descriptor)
+        }
+    }
+
+    $cleanParts = foreach ($part in $summaryParts) {
+        $part.Trim().TrimEnd([char[]]"。：")
+    }
+
+    $summary = if ($cleanParts.Count -gt 0) {
+        ($cleanParts -join "、")
+    } else {
+        "这一段做了大量调整和修复"
+    }
+
+    return ("- {0}.x：{1}" -f $Train, $summary)
+}
+
 $projectRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $target = Parse-VersionValue $TargetVersion
 
@@ -216,53 +248,86 @@ $visibleTrains = $visibleSections |
     Select-Object -ExpandProperty Train -Unique
 
 $builder = New-Object System.Text.StringBuilder
-[void]$builder.AppendLine(("## 从 v{0} 到 v{1} 的升级摘要" -f $from, $TargetVersion))
-[void]$builder.AppendLine()
-[void]$builder.AppendLine("这份公告由制作进度文档自动整理，适合给跨多个小版本升级的用户看。")
-[void]$builder.AppendLine()
 
-foreach ($train in $visibleTrains) {
-    $trainSections = @($sections | Where-Object { $_.Train -eq $train })
-    $representative = $trainSections | Where-Object { $_.Version.Build -eq 0 } | Select-Object -First 1
-    if (-not $representative) {
-        $representative = $trainSections | Select-Object -First 1
-    }
-    $sectionMarkdown = Build-TrainSection -Train $train -RepresentativeSection $representative
-    [void]$builder.Append($sectionMarkdown)
-}
-
-$exactTargetSection = $sections | Where-Object { $_.Version -eq $target } | Select-Object -First 1
-if ($exactTargetSection -and $exactTargetSection.Version.Build -ne 0) {
-    $lines = $exactTargetSection.Body -split "`r?`n"
-    $descriptor = Get-SectionDescriptor $lines
-    $bullets = Get-SectionBullets $lines
-    [void]$builder.AppendLine(("### 当前版本 v{0}" -f $TargetVersion))
+if ($Format -eq "Short") {
+    [void]$builder.AppendLine(("## v{0} 更新速览" -f $TargetVersion))
     [void]$builder.AppendLine()
-    if ($descriptor) {
-        [void]$builder.AppendLine($descriptor)
+    [void]$builder.AppendLine(("从 v{0} 到 v{1}，主要变化如下：" -f $from, $TargetVersion))
+    [void]$builder.AppendLine()
+
+    foreach ($train in $visibleTrains) {
+        $trainSections = @($sections | Where-Object { $_.Train -eq $train })
+        $representative = $trainSections | Where-Object { $_.Version.Build -eq 0 } | Select-Object -First 1
+        if (-not $representative) {
+            $representative = $trainSections | Select-Object -First 1
+        }
+        [void]$builder.AppendLine((Build-ShortTrainLine -Train $train -RepresentativeSection $representative))
+    }
+
+    if ($CurrentHighlights.Count -gt 0) {
         [void]$builder.AppendLine()
-    }
-    foreach ($bullet in ($bullets | Select-Object -First 4)) {
-        [void]$builder.AppendLine(("- {0}" -f $bullet))
-    }
-    [void]$builder.AppendLine()
-} elseif ($CurrentHighlights.Count -gt 0) {
-    [void]$builder.AppendLine(("### 当前版本 v{0}" -f $TargetVersion))
-    [void]$builder.AppendLine()
-    foreach ($highlight in $CurrentHighlights) {
-        $text = $highlight.Trim()
-        if ($text) {
-            [void]$builder.AppendLine(("- {0}" -f $text))
+        [void]$builder.AppendLine("当前版本补充：")
+        foreach ($highlight in $CurrentHighlights) {
+            $text = $highlight.Trim()
+            if ($text) {
+                [void]$builder.AppendLine(("- {0}" -f $text))
+            }
         }
     }
-    [void]$builder.AppendLine()
-}
 
-[void]$builder.AppendLine("### 升级提醒")
-[void]$builder.AppendLine()
-[void]$builder.AppendLine("- 大跨版本升级前，建议先做一次手动备份。")
-[void]$builder.AppendLine("- 如果你改过酒馆目录名，新版会比旧版更容易识别和接住这种情况。")
-[void]$builder.AppendLine("- 如果你还停在很早的旧版，必要时可以先手动安装一次最新版 APK，再继续用启动器自动更新。")
+    [void]$builder.AppendLine()
+    [void]$builder.AppendLine("升级提醒：")
+    [void]$builder.AppendLine("- 建议先做一次手动备份。")
+    [void]$builder.AppendLine("- 如果你还停在很早的旧版，必要时可以先手动安装一次最新版 APK。")
+} else {
+    [void]$builder.AppendLine(("## 从 v{0} 到 v{1} 的升级摘要" -f $from, $TargetVersion))
+    [void]$builder.AppendLine()
+    [void]$builder.AppendLine("这份公告由制作进度文档自动整理，适合给跨多个小版本升级的用户看。")
+    [void]$builder.AppendLine()
+
+    foreach ($train in $visibleTrains) {
+        $trainSections = @($sections | Where-Object { $_.Train -eq $train })
+        $representative = $trainSections | Where-Object { $_.Version.Build -eq 0 } | Select-Object -First 1
+        if (-not $representative) {
+            $representative = $trainSections | Select-Object -First 1
+        }
+        $sectionMarkdown = Build-TrainSection -Train $train -RepresentativeSection $representative
+        [void]$builder.Append($sectionMarkdown)
+    }
+
+    $exactTargetSection = $sections | Where-Object { $_.Version -eq $target } | Select-Object -First 1
+    if ($exactTargetSection -and $exactTargetSection.Version.Build -ne 0) {
+        $lines = $exactTargetSection.Body -split "`r?`n"
+        $descriptor = Get-SectionDescriptor $lines
+        $bullets = Get-SectionBullets $lines
+        [void]$builder.AppendLine(("### 当前版本 v{0}" -f $TargetVersion))
+        [void]$builder.AppendLine()
+        if ($descriptor) {
+            [void]$builder.AppendLine($descriptor)
+            [void]$builder.AppendLine()
+        }
+        foreach ($bullet in ($bullets | Select-Object -First 4)) {
+            [void]$builder.AppendLine(("- {0}" -f $bullet))
+        }
+        [void]$builder.AppendLine()
+    } elseif ($CurrentHighlights.Count -gt 0) {
+        [void]$builder.AppendLine(("### 当前版本 v{0}" -f $TargetVersion))
+        [void]$builder.AppendLine()
+        foreach ($highlight in $CurrentHighlights) {
+            $text = $highlight.Trim()
+            if ($text) {
+                [void]$builder.AppendLine(("- {0}" -f $text))
+            }
+        }
+        [void]$builder.AppendLine()
+    }
+
+    [void]$builder.AppendLine("### 升级提醒")
+    [void]$builder.AppendLine()
+    [void]$builder.AppendLine("- 大跨版本升级前，建议先做一次手动备份。")
+    [void]$builder.AppendLine("- 如果你改过酒馆目录名，新版会比旧版更容易识别和接住这种情况。")
+    [void]$builder.AppendLine("- 如果你还停在很早的旧版，必要时可以先手动安装一次最新版 APK，再继续用启动器自动更新。")
+}
 
 $markdown = $builder.ToString().TrimEnd()
 
@@ -271,5 +336,7 @@ if (-not [string]::IsNullOrWhiteSpace($OutputFile)) {
 }
 
 $markdown
+
+
 
 
