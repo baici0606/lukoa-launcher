@@ -725,6 +725,10 @@ fun VersionManagementSection(
     )
     val updateEnabled = !actionsLocked && actionState.updateAvailable
     val rollbackEnabled = !actionsLocked && actionState.rollbackAvailable
+    val disabledReasons = listOfNotNull(
+        actionState.updateDisabledReason?.let { "更新：$it" },
+        actionState.rollbackDisabledReason?.let { "回退：$it" },
+    ).distinct()
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
         SectionPanel(title = "当前酒馆版本", accentColor = LukoaColors.Accent) {
             Text(
@@ -813,9 +817,11 @@ fun VersionManagementSection(
                 onSelectVersion = onSelectVersion,
             )
 
-            VersionSelectionNotice(
+            VersionOperationStatusCard(
+                currentVersionInfo = tavernVersionInfo,
                 selectedVersion = selectedVersion,
-                relationHint = TavernVersionActionGuards.relationHint(actionState, selectedVersion),
+                actionState = actionState,
+                disabledReasons = disabledReasons,
             )
 
             Row(
@@ -840,14 +846,6 @@ fun VersionManagementSection(
                 )
             }
 
-            val disabledReasons = listOfNotNull(
-                actionState.updateDisabledReason?.let { "更新：$it" },
-                actionState.rollbackDisabledReason?.let { "回退：$it" },
-            ).distinct()
-            if (disabledReasons.isNotEmpty()) {
-                VersionActionNotice(disabledReasons)
-            }
-
             Text(
                 text = if (tavernVersionInfo.notInstalled) {
                     "未安装时不能更新或回退，先安装酒馆。"
@@ -862,10 +860,162 @@ fun VersionManagementSection(
 }
 
 @Composable
-private fun VersionActionNotice(reasons: List<String>) {
+private fun VersionOperationStatusCard(
+    currentVersionInfo: TavernVersionInfo,
+    selectedVersion: TavernVersionChoice?,
+    actionState: TavernVersionActionState,
+    disabledReasons: List<String>,
+) {
+    val statusText: String
+    val statusColor: Color
+    when {
+        currentVersionInfo.notInstalled -> {
+            statusText = "先安装酒馆"
+            statusColor = LukoaColors.Amber
+        }
+        !currentVersionInfo.hasData -> {
+            statusText = "先读取当前版本"
+            statusColor = LukoaColors.Amber
+        }
+        currentVersionInfo.hasLocalChanges -> {
+            statusText = "源码有本地改动"
+            statusColor = LukoaColors.Danger
+        }
+        selectedVersion == null -> {
+            statusText = "先选目标版本"
+            statusColor = LukoaColors.Amber
+        }
+        actionState.updateAvailable -> {
+            statusText = "可以更新"
+            statusColor = LukoaColors.Accent
+        }
+        actionState.rollbackAvailable -> {
+            statusText = "可以回退"
+            statusColor = LukoaColors.Accent
+        }
+        actionState.relation == TavernTargetRelation.Same -> {
+            statusText = "已经是这个版本"
+            statusColor = LukoaColors.Muted
+        }
+        else -> {
+            statusText = "暂时不能执行"
+            statusColor = LukoaColors.Muted
+        }
+    }
+
     Surface(
         modifier = Modifier.fillMaxWidth(),
         color = LukoaColors.SurfaceAlt,
+        shape = RoundedCornerShape(8.dp),
+        border = BorderStroke(1.dp, LukoaColors.Line),
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "操作状态",
+                    color = LukoaColors.Muted,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Surface(
+                    color = statusColor.copy(alpha = 0.14f),
+                    shape = LukoaCapsuleShape,
+                    border = BorderStroke(1.dp, statusColor.copy(alpha = 0.4f)),
+                ) {
+                    Text(
+                        text = statusText,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                        color = statusColor,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                VersionStatusValueCard(
+                    label = "当前版本",
+                    value = currentVersionInfo.displayVersion,
+                    accentColor = when {
+                        currentVersionInfo.hasData -> LukoaColors.Text
+                        currentVersionInfo.notInstalled -> LukoaColors.Amber
+                        else -> LukoaColors.Muted
+                    },
+                    modifier = Modifier.weight(1f),
+                )
+                VersionStatusValueCard(
+                    label = "目标版本",
+                    value = selectedVersion?.label ?: "未选择",
+                    accentColor = if (selectedVersion == null) LukoaColors.Muted else LukoaColors.Accent,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+
+            selectedVersion?.let { choice ->
+                Text(
+                    text = when (choice.kind) {
+                        TavernVersionKind.Stable -> "稳定版，适合大多数人。"
+                        TavernVersionKind.Test -> "测试版，可能有新功能，也可能不稳定。"
+                        TavernVersionKind.Custom -> "自定义目标，请确认版本名、分支名或 commit 没填错。"
+                    },
+                    color = LukoaColors.Muted,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+
+            TavernVersionActionGuards.relationHint(actionState, selectedVersion)
+                ?.takeIf { it.isNotBlank() }
+                ?.let { hint ->
+                    Text(
+                        text = hint,
+                        color = if (statusColor == LukoaColors.Accent) LukoaColors.Accent else LukoaColors.Muted,
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
+
+            if (disabledReasons.isNotEmpty()) {
+                HorizontalDivider(color = LukoaColors.Line)
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        text = "当前限制",
+                        color = LukoaColors.Muted,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    disabledReasons.forEach { reason ->
+                        Text(
+                            text = reason,
+                            color = LukoaColors.Text,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun VersionStatusValueCard(
+    label: String,
+    value: String,
+    accentColor: Color,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier,
+        color = LukoaColors.Surface,
         shape = RoundedCornerShape(8.dp),
         border = BorderStroke(1.dp, LukoaColors.Line),
     ) {
@@ -874,18 +1024,19 @@ private fun VersionActionNotice(reasons: List<String>) {
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             Text(
-                text = "当前限制",
+                text = label,
                 color = LukoaColors.Muted,
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.SemiBold,
             )
-            reasons.forEach { reason ->
-                Text(
-                    text = reason,
-                    color = LukoaColors.Text,
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
+            Text(
+                text = value,
+                color = accentColor,
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
     }
 }
@@ -2060,21 +2211,7 @@ fun SettingsSection(
         }
 
         SectionPanel(title = "更新设置", accentColor = LukoaColors.Amber) {
-            Text(
-                text = githubUpdateState.message,
-                color = if (githubUpdateState.hasUpdate) LukoaColors.Danger else LukoaColors.Muted,
-                style = MaterialTheme.typography.bodySmall,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
-
-            githubUpdateState.latest?.let { latest ->
-                Text(
-                    text = "GitHub 最新：v${latest.versionName}",
-                    color = LukoaColors.Muted,
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
+            GithubUpdateStatusCard(githubUpdateState)
 
             OutlinedTextField(
                 value = repositoryInput,
@@ -2134,24 +2271,30 @@ fun SettingsSection(
                 onClick = onCheckUpdate,
             )
 
-            if (githubUpdateState.hasUpdate) {
-                SecondaryActionButton(
-                    text = "查看新版",
-                    enabled = !updateLocked,
-                    accentColor = LukoaColors.Accent,
+            if (githubUpdateState.hasUpdate || githubUpdateState.latest?.releaseUrl?.isNotBlank() == true) {
+                Row(
                     modifier = Modifier.fillMaxWidth(),
-                    onClick = onInstallUpdate,
-                )
-            }
-
-            if (githubUpdateState.latest?.releaseUrl?.isNotBlank() == true) {
-                SecondaryActionButton(
-                    text = "打开 GitHub 发布页",
-                    enabled = !updateLocked,
-                    accentColor = LukoaColors.Accent,
-                    modifier = Modifier.fillMaxWidth(),
-                    onClick = onOpenRelease,
-                )
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    if (githubUpdateState.hasUpdate) {
+                        SecondaryActionButton(
+                            text = "查看新版",
+                            enabled = !updateLocked,
+                            accentColor = LukoaColors.Accent,
+                            modifier = Modifier.weight(1f),
+                            onClick = onInstallUpdate,
+                        )
+                    }
+                    if (githubUpdateState.latest?.releaseUrl?.isNotBlank() == true) {
+                        SecondaryActionButton(
+                            text = "打开发布页",
+                            enabled = !updateLocked,
+                            accentColor = LukoaColors.Accent,
+                            modifier = Modifier.weight(1f),
+                            onClick = onOpenRelease,
+                        )
+                    }
+                }
             }
         }
 
@@ -2208,6 +2351,11 @@ fun UpdateAvailableDialog(
     val publishedText = remember(updateInfo.publishedAt) {
         formatGithubPublishedTime(updateInfo.publishedAt)
     }
+    val primaryActionText = when {
+        downloading -> "下载中..."
+        updateInfo.apkDownloadUrl.isBlank() -> "打开发布页"
+        else -> "立即更新"
+    }
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = LukoaColors.Surface,
@@ -2217,74 +2365,201 @@ fun UpdateAvailableDialog(
             Text("发现新版本 v${updateInfo.versionName}")
         },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text(
-                    text = "当前版本 v$currentVersionName -> 新版本 v${updateInfo.versionName}",
-                    color = LukoaColors.Muted,
-                    style = MaterialTheme.typography.bodySmall,
-                )
-                if (publishedText.isNotBlank()) {
-                    Text(
-                        text = "发布时间 $publishedText",
-                        color = LukoaColors.Muted,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Surface(
+                    color = LukoaColors.SurfaceAlt,
+                    shape = RoundedCornerShape(8.dp),
+                    border = BorderStroke(1.dp, LukoaColors.Line),
+                ) {
+                    Column(
+                        modifier = Modifier.padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            VersionStatusValueCard(
+                                label = "当前版本",
+                                value = "v$currentVersionName",
+                                accentColor = LukoaColors.Muted,
+                                modifier = Modifier.weight(1f),
+                            )
+                            VersionStatusValueCard(
+                                label = "新版本",
+                                value = "v${updateInfo.versionName}",
+                                accentColor = LukoaColors.Accent,
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
+                        if (publishedText.isNotBlank()) {
+                            VersionInfoLine("发布时间", publishedText)
+                        }
+                        if (updateInfo.releaseName.isNotBlank() && updateInfo.releaseName != updateInfo.tagName) {
+                            VersionInfoLine("版本标题", updateInfo.releaseName)
+                        }
+                    }
                 }
-                if (updateInfo.releaseName.isNotBlank() && updateInfo.releaseName != updateInfo.tagName) {
-                    Text(
-                        text = updateInfo.releaseName,
-                        color = LukoaColors.Muted,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
+
                 Text(
                     text = "更新内容",
-                    color = LukoaColors.Amber,
+                    color = LukoaColors.Accent,
                     fontWeight = FontWeight.SemiBold,
                     style = MaterialTheme.typography.titleSmall,
                 )
                 Surface(
                     color = LukoaColors.SurfaceAlt,
                     shape = RoundedCornerShape(8.dp),
+                    border = BorderStroke(1.dp, LukoaColors.Line),
                 ) {
                     Text(
                         text = updateInfo.body.ifBlank { "这个版本没有填写更新说明。" },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .heightIn(min = 90.dp, max = 220.dp)
+                            .heightIn(min = 96.dp, max = 220.dp)
                             .verticalScroll(rememberScrollState())
-                            .padding(10.dp),
+                            .padding(12.dp),
                         color = LukoaColors.Text,
                         style = MaterialTheme.typography.bodySmall,
                     )
                 }
-                Text(
-                    text = "清除红点后，这个版本不会再自动弹出提醒，但你之后仍然可以手动点右上角版本查看。",
-                    color = LukoaColors.Muted,
-                    style = MaterialTheme.typography.bodySmall,
+                Surface(
+                    color = LukoaColors.SurfaceAlt,
+                    shape = RoundedCornerShape(8.dp),
+                    border = BorderStroke(1.dp, LukoaColors.Line),
+                ) {
+                    Text(
+                        text = "清除红点后，这个版本不会再自动弹出提醒，但你之后仍然可以手动点右上角版本查看。",
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                        color = LukoaColors.Muted,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+                ToneActionButton(
+                    text = primaryActionText,
+                    enabled = !downloading,
+                    tone = ActionTone.Safe,
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = onInstall,
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    ToneActionButton(
+                        text = "详情",
+                        enabled = true,
+                        tone = ActionTone.Neutral,
+                        modifier = Modifier.weight(1f),
+                        onClick = onOpenRelease,
+                    )
+                    ToneActionButton(
+                        text = "清除红点",
+                        enabled = true,
+                        tone = ActionTone.Neutral,
+                        modifier = Modifier.weight(1f),
+                        onClick = onClearBadge,
+                    )
+                }
+                ToneActionButton(
+                    text = "稍后",
+                    enabled = true,
+                    tone = ActionTone.Neutral,
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = onDismiss,
                 )
             }
         },
-        confirmButton = {
-            DialogActionButton(
-                text = when {
-                    downloading -> "下载中..."
-                    updateInfo.apkDownloadUrl.isBlank() -> "打开发布页"
-                    else -> "立即更新"
-                },
-                enabled = !downloading,
-                tone = ActionTone.Safe,
-                onClick = onInstall,
-            )
-        },
-        dismissButton = {
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                DialogActionButton("清除红点", tone = ActionTone.Neutral, onClick = onClearBadge)
-                DialogActionButton("稍后", tone = ActionTone.Neutral, onClick = onDismiss)
-                DialogActionButton("详情", tone = ActionTone.Neutral, onClick = onOpenRelease)
-            }
-        },
+        confirmButton = {},
+        dismissButton = {},
     )
+}
+
+@Composable
+private fun GithubUpdateStatusCard(
+    githubUpdateState: GithubUpdateUiState,
+) {
+    val statusText: String
+    val statusColor: Color
+    when {
+        githubUpdateState.downloading -> {
+            statusText = "正在下载"
+            statusColor = LukoaColors.Accent
+        }
+        githubUpdateState.checking -> {
+            statusText = "正在检查"
+            statusColor = LukoaColors.Amber
+        }
+        githubUpdateState.hasUpdate -> {
+            statusText = "发现新版本"
+            statusColor = LukoaColors.Accent
+        }
+        githubUpdateState.latest != null -> {
+            statusText = "已是最新"
+            statusColor = LukoaColors.Muted
+        }
+        githubUpdateState.repository.isBlank() -> {
+            statusText = "未配置仓库"
+            statusColor = LukoaColors.Amber
+        }
+        else -> {
+            statusText = "等待检查"
+            statusColor = LukoaColors.Muted
+        }
+    }
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = LukoaColors.SurfaceAlt,
+        shape = RoundedCornerShape(8.dp),
+        border = BorderStroke(1.dp, LukoaColors.Line),
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "当前状态",
+                    color = LukoaColors.Muted,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Surface(
+                    color = statusColor.copy(alpha = 0.14f),
+                    shape = LukoaCapsuleShape,
+                    border = BorderStroke(1.dp, statusColor.copy(alpha = 0.4f)),
+                ) {
+                    Text(
+                        text = statusText,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                        color = statusColor,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
+            }
+            Text(
+                text = githubUpdateState.message,
+                color = if (githubUpdateState.hasUpdate) LukoaColors.Text else LukoaColors.Muted,
+                style = MaterialTheme.typography.bodySmall,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis,
+            )
+            githubUpdateState.latest?.let { latest ->
+                VersionInfoLine("GitHub 最新", "v${latest.versionName}")
+            }
+            githubUpdateState.lastCheckedText
+                .takeIf { it.isNotBlank() }
+                ?.let { checkedText ->
+                    VersionInfoLine("上次检查", checkedText)
+                }
+        }
+    }
 }
 
 private val GITHUB_UPDATE_TIME_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")

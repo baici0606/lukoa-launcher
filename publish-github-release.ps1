@@ -37,26 +37,27 @@ function Get-GhPath {
 
 function Invoke-Git {
     param(
-        [Parameter(ValueFromRemainingArguments = $true)]
-        [string[]]$Arguments
+        [Parameter(Position = 0, ValueFromRemainingArguments = $true)]
+        [string[]]$CommandArgs
     )
 
-    & git @Arguments
+    & git @CommandArgs
     if ($LASTEXITCODE -ne 0) {
-        throw ('git command failed: git {0}' -f ($Arguments -join ' '))
+        throw ('git command failed: git {0}' -f ($CommandArgs -join ' '))
     }
 }
 
 function Invoke-Gh {
     param(
+        [Parameter(Position = 0)]
         [string]$GhPath,
-        [Parameter(ValueFromRemainingArguments = $true)]
-        [string[]]$Arguments
+        [Parameter(Position = 1, ValueFromRemainingArguments = $true)]
+        [string[]]$CommandArgs
     )
 
-    & $GhPath @Arguments
+    & $GhPath @CommandArgs
     if ($LASTEXITCODE -ne 0) {
-        throw ('gh command failed: gh {0}' -f ($Arguments -join ' '))
+        throw ('gh command failed: gh {0}' -f ($CommandArgs -join ' '))
     }
 }
 
