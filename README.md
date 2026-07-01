@@ -1,122 +1,91 @@
-# 露科亚启动器 GitHub 发版
+# 露科亚启动器
 
-## 先做一次登录
+一个运行在 Android 上、专门给 `Termux + SillyTavern` 准备的启动器。
+
+它的目标不是替代 Termux，而是把启动、停止、日志查看、版本切换、备份、镜像源切换和新手引导这些操作收进一个更顺手的移动端 App 里。
+
+## 项目定位
+
+- 前端：Android App，`Kotlin + Jetpack Compose`
+- 后端执行：依赖 `Termux` 执行真正的 Shell 命令
+- 服务对象：需要在手机上使用 `SillyTavern` 的用户
+
+## 目前功能
+
+- 启动、停止、检测 SillyTavern 状态
+- 同步 Termux 调用返回和运行日志
+- 新手引导、权限检查、Termux 唤醒
+- 酒馆版本读取、安装、更新、回退
+- 官方源 / 镜像源切换与可用性检测
+- 手动备份、自动备份、导入、导出、应用备份
+- GitHub 更新检测与 APK 内更新
+- 诊断日志导出，方便排查问题
+
+## 运行前提
+
+- Android 8.0 及以上
+- 已安装 `Termux`
+- 已授予 `RUN_COMMAND` 权限
+- 首次使用时需要按引导完成 Termux 初始化
+
+## 仓库结构
+
+- `app/`
+  Android 主工程
+- `app/src/main/java/moe/lukoa/launcher/`
+  启动器界面、状态管理、Termux 调用、备份和版本管理逻辑
+- `app/src/main/assets/lukoa-tavern.sh`
+  下发到 Termux 执行的核心脚本
+- `build-debug.ps1`
+  本地构建 debug APK
+- `publish-github-release.ps1`
+  自动构建、打 tag、推送并发布 GitHub Release
+- `generate-release-notes.ps1`
+  生成 release 公告
+
+## 本地构建
+
+先准备 Android SDK，然后在项目根目录运行：
 
 ```powershell
-& "C:\Program Files\GitHub CLI\gh.exe" auth login
+powershell -ExecutionPolicy Bypass -File .\build-debug.ps1 -AndroidHome "你的 Android SDK 路径"
 ```
 
-建议选择：
+生成的 APK 默认在：
 
-- `GitHub.com`
-- `HTTPS`
-- `Login with a web browser`
+```text
+app/build/outputs/apk/debug/app-debug.apk
+```
 
-登录完检查：
+## 发布到 GitHub Release
+
+先确认你已经安装并登录 `gh`：
 
 ```powershell
-& "C:\Program Files\GitHub CLI\gh.exe" auth status
+gh auth status
 ```
 
-## 一键发版
-
-在项目目录运行：
+然后运行：
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\publish-github-release.ps1 -VersionName 0.8.20 -VersionCode 150
+powershell -ExecutionPolicy Bypass -File .\publish-github-release.ps1 -VersionName 0.8.24 -VersionCode 154
 ```
 
-脚本会自动做这些事：
+这个脚本会自动完成：
 
 1. 更新 `app/build.gradle.kts` 里的版本号
 2. 构建 APK
-3. 复制一个带版本号的 APK 到 `outputs`
-4. 提交当前项目改动
+3. 复制带版本号的 APK 到 `outputs/`
+4. 提交当前改动
 5. 打 tag
 6. 推送分支和 tag
 7. 创建 GitHub Release 并上传 APK
 
-脚本上传到 GitHub Release 的文件名会固定使用英文：
+## 注意
 
-```text
-lukoa-launcher-v版本号.apk
-```
+- 这个项目仓库现在是公开的，但当前还没有附带正式开源许可证
+- 如果你要让别人按标准开源协议使用、修改、分发这份代码，后续还需要补 `LICENSE`
 
-这样可以避开 Windows 和 GitHub CLI 在中文文件名下偶发的资产名异常。
+## 仓库地址
 
-## 先做一次自检
-
-如果你只想先确认环境没问题，不想真的提交和发版，可以先跑：
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\publish-github-release.ps1 -VersionName 0.8.20 -VersionCode 150 -ValidateOnly
-```
-
-这个模式只检查：
-
-1. `gh` 是否已安装
-2. GitHub 是否已登录
-3. 当前目录是不是项目仓库根目录
-4. 当前分支是否有效
-
-## 可选参数
-
-自定义标题：
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\publish-github-release.ps1 -VersionName 0.8.20 -VersionCode 150 -ReleaseTitle "露科亚启动器 v0.8.20"
-```
-
-直接写更新说明：
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\publish-github-release.ps1 -VersionName 0.8.20 -VersionCode 150 -ReleaseNotes "修复启动与多目录选择，优化 GitHub 发版链路。"
-```
-
-或者用文件：
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\publish-github-release.ps1 -VersionName 0.8.20 -VersionCode 150 -ReleaseNotesFile .\release-notes.md
-```
-
-自动从 `制作进度.md` 生成一份长公告：
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\publish-github-release.ps1 -VersionName 0.8.20 -VersionCode 150 -AutoNotes
-```
-
-自动生成适合发群或发频道的短公告：
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\publish-github-release.ps1 -VersionName 0.8.20 -VersionCode 150 -AutoNotes -AutoNotesMode Short
-```
-
-如果你想明确指定“从哪个旧版本开始写到现在”，可以加：
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\publish-github-release.ps1 -VersionName 0.8.20 -VersionCode 150 -AutoNotes -AutoNotesFrom 0.5.5
-```
-
-如果当前版本还有一些没写进 `制作进度.md` 的收尾内容，可以额外补几条：
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\publish-github-release.ps1 -VersionName 0.8.20 -VersionCode 150 -AutoNotes -CurrentHighlights "补齐多酒馆目录选择" -CurrentHighlights "安装前预检接入镜像源检测"
-```
-
-单独预览自动生成的长公告：
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\generate-release-notes.ps1 -TargetVersion 0.8.20 -FromVersion 0.5.5
-```
-
-单独预览自动生成的短公告：
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\generate-release-notes.ps1 -TargetVersion 0.8.20 -FromVersion 0.5.5 -Format Short
-```
-
-只改版本号和发版文案、跳过重新构建：
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\publish-github-release.ps1 -VersionName 0.8.20 -VersionCode 150 -SkipBuild
-```
+- GitHub: [baici0606/lukoa-launcher](https://github.com/baici0606/lukoa-launcher)
