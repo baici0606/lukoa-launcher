@@ -84,7 +84,7 @@ fun InfoIconButton(
             .clickable(onClick = feedbackClick),
         color = LukoaColors.SurfaceAlt,
         shape = LukoaCapsuleShape,
-        border = BorderStroke(1.dp, LukoaColors.Line),
+        border = BorderStroke(1.dp, LukoaColors.Line.copy(alpha = 0.5f)),
     ) {
         Box(contentAlignment = Alignment.Center) {
             Text(
@@ -143,15 +143,15 @@ fun SecondaryActionButton(
     val feedbackClick = rememberFeedbackClick(onClick)
     val styleColor = accentColor
     val toneColor = if (enabled) styleColor else LukoaColors.Dim
-    val borderColor = if (enabled) styleColor.copy(alpha = 0.46f) else LukoaColors.Line.copy(alpha = 0.56f)
+    val borderColor = if (enabled) styleColor.copy(alpha = 0.3f) else LukoaColors.Line.copy(alpha = 0.3f)
     OutlinedButton(
         onClick = feedbackClick,
         enabled = enabled,
-        modifier = modifier.height(44.dp),
+        modifier = modifier.heightIn(min = 48.dp),
         border = BorderStroke(1.dp, borderColor),
         shape = LukoaCapsuleShape,
         colors = ButtonDefaults.outlinedButtonColors(
-            containerColor = if (enabled) styleColor.copy(alpha = 0.08f) else Color.Transparent,
+            containerColor = if (enabled) styleColor.copy(alpha = 0.05f) else Color.Transparent,
             contentColor = toneColor,
             disabledContainerColor = Color.Transparent,
             disabledContentColor = LukoaColors.Dim,
@@ -182,13 +182,12 @@ fun BackupStepper(
     val buttonWidth = if (hasLargeStep) 44.dp else 52.dp
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        color = LukoaColors.SurfaceAlt,
-        shape = RoundedCornerShape(8.dp),
-        border = BorderStroke(1.dp, LukoaColors.Line),
+        color = LukoaColors.SurfaceAlt.copy(alpha = 0.5f),
+        shape = RoundedCornerShape(12.dp),
     ) {
         Column(
-            modifier = Modifier.padding(10.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -232,14 +231,14 @@ fun BackupStepper(
                 Surface(
                     modifier = Modifier
                         .weight(1f)
-                        .height(40.dp),
-                    color = accentColor.copy(alpha = if (enabled) 0.12f else 0.06f),
+                        .height(44.dp),
+                    color = accentColor.copy(alpha = if (enabled) 0.08f else 0.04f),
                     shape = LukoaCapsuleShape,
-                    border = BorderStroke(1.dp, accentColor.copy(alpha = if (enabled) 0.36f else 0.18f)),
+                    border = BorderStroke(1.dp, accentColor.copy(alpha = if (enabled) 0.2f else 0.1f)),
                 ) {
                     Text(
                         text = value,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp),
                         color = if (enabled) LukoaColors.Text else LukoaColors.Dim,
                         style = MaterialTheme.typography.bodySmall,
                         fontWeight = FontWeight.Bold,
@@ -283,11 +282,11 @@ private fun StepperButton(
     OutlinedButton(
         onClick = feedbackClick,
         enabled = enabled,
-        modifier = modifier.height(40.dp),
-        border = BorderStroke(1.dp, if (enabled) styleColor.copy(alpha = 0.46f) else LukoaColors.Line),
+        modifier = modifier.height(44.dp),
+        border = BorderStroke(1.dp, if (enabled) styleColor.copy(alpha = 0.3f) else LukoaColors.Line.copy(alpha = 0.4f)),
         shape = LukoaCapsuleShape,
         colors = ButtonDefaults.outlinedButtonColors(
-            containerColor = if (enabled) styleColor.copy(alpha = 0.08f) else Color.Transparent,
+            containerColor = if (enabled) styleColor.copy(alpha = 0.05f) else Color.Transparent,
             contentColor = toneColor,
             disabledContainerColor = Color.Transparent,
             disabledContentColor = LukoaColors.Dim,
@@ -312,12 +311,12 @@ fun StatusPill(
     val shape = RoundedCornerShape(999.dp)
     val background = if (active) activeBackground else LukoaColors.SurfaceAlt
     val contentColor = if (active) toneColor else LukoaColors.Muted
-    val borderColor = if (active) toneColor.copy(alpha = 0.48f) else LukoaColors.Line
+    val borderColor = if (active) toneColor.copy(alpha = 0.3f) else Color.Transparent
     Surface(
         modifier = modifier
             .heightIn(min = 32.dp)
             .border(1.dp, borderColor, shape),
-        color = background,
+        color = if (active) background.copy(alpha = 0.8f) else background.copy(alpha = 0.5f),
         shape = shape,
     ) {
         Text(

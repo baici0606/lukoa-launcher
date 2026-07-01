@@ -846,54 +846,21 @@ class TermuxCommandRunner(private val context: Context) {
               TAVERN_CANDIDATE_COUNT=0
               TAVERN_CANDIDATE_FIRST=""
               DISCOVERED_TAVERN_DIR=""
-              if looks_like_tavern_dir "${'$'}TAVERN_DIR"; then
-                append_tavern_candidate "${'$'}TAVERN_DIR"
-              fi
-              if [ "${'$'}DEFAULT_TAVERN_DIR" != "${'$'}TAVERN_DIR" ] && looks_like_tavern_dir "${'$'}DEFAULT_TAVERN_DIR"; then
-                append_tavern_candidate "${'$'}DEFAULT_TAVERN_DIR"
-              fi
-              for candidate in "${'$'}HOME_DIR"/*; do
-                [ -d "${'$'}candidate" ] || continue
-                [ "${'$'}candidate" != "${'$'}TAVERN_DIR" ] || continue
-                [ "${'$'}candidate" != "${'$'}DEFAULT_TAVERN_DIR" ] || continue
-                looks_like_tavern_dir "${'$'}candidate" || continue
-                append_tavern_candidate "${'$'}candidate"
-              done
             }
             discover_tavern_dir() {
-              collect_tavern_dir_candidates
-              if [ "${'$'}{TAVERN_CANDIDATE_COUNT:-0}" -eq 1 ] && [ -n "${'$'}{TAVERN_CANDIDATE_FIRST:-}" ]; then
-                DISCOVERED_TAVERN_DIR="${'$'}TAVERN_CANDIDATE_FIRST"
-                return 0
-              fi
               return 1
             }
             adopt_detected_tavern_dir() {
-              discover_tavern_dir || return 1
-              [ -n "${'$'}{DISCOVERED_TAVERN_DIR:-}" ] || return 1
-              TAVERN_DIR="${'$'}DISCOVERED_TAVERN_DIR"
-              return 0
+              return 1
             }
             emit_tavern_dir_candidates() {
-              [ "${'$'}{TAVERN_CANDIDATE_COUNT:-0}" -gt 1 ] || return 0
-              printf "\n==== SillyTavern directory candidates ====\n"
-              printf "%s\n" "${'$'}TAVERN_CANDIDATE_LIST" | awk '{ printf "candidate.%d=%s\n", NR, $0 }'
-              printf "==== end SillyTavern directory candidates ====\n"
+              return 0
             }
             missing_tavern_dir_exit_code() {
-              if [ "${'$'}{TAVERN_CANDIDATE_COUNT:-0}" -gt 1 ]; then
-                printf "67"
-              else
-                printf "66"
-              fi
+              printf "66"
             }
             write_tavern_dir_error() {
-              code="${'$'}(missing_tavern_dir_exit_code)"
-              if [ "${'$'}{TAVERN_CANDIDATE_COUNT:-0}" -gt 1 ]; then
-                write_status "error" "Multiple SillyTavern directories found; choose one in the launcher" false "${'$'}code"
-              else
-                write_status "error" "SillyTavern directory not found: ${'$'}TAVERN_DIR" false "${'$'}code"
-              fi
+              write_status "error" "SillyTavern directory not found: ${'$'}TAVERN_DIR" false 66
             }
             timestamp() {
               date -u +"%Y-%m-%dT%H:%M:%SZ"

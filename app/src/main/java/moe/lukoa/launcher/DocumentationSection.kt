@@ -2,13 +2,18 @@ package moe.lukoa.launcher
 
 import android.view.MotionEvent
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -25,6 +30,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+
 
 private enum class DocCategory(val label: String, val title: String) {
     NewUser("新手", "新手上手"),
@@ -41,7 +48,7 @@ fun DocumentationSection(
     onPagerLockChange: (Boolean) -> Unit = {},
 ) {
     var selectedCategory by remember { mutableStateOf(DocCategory.NewUser) }
-    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         SectionPanel(title = "文档导航", accentColor = LukoaColors.Accent) {
             Row(
                 modifier = Modifier
@@ -55,7 +62,7 @@ fun DocumentationSection(
                         false
                     }
                     .horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 DocCategory.entries.forEach { category ->
                     DocNavChip(
@@ -208,15 +215,15 @@ private fun DocNavChip(
     val color = if (selected) LukoaColors.Accent else LukoaColors.Muted
     Surface(
         modifier = Modifier.clickable(onClick = rememberFeedbackClick(onClick)),
-        color = if (selected) LukoaColors.AccentSoft else LukoaColors.SurfaceAlt,
+        color = if (selected) LukoaColors.Accent.copy(alpha = 0.12f) else LukoaColors.SurfaceAlt.copy(alpha = 0.5f),
         shape = LukoaCapsuleShape,
-        border = BorderStroke(1.dp, if (selected) LukoaColors.Accent.copy(alpha = 0.55f) else LukoaColors.Line),
+        border = BorderStroke(1.dp, if (selected) LukoaColors.Accent.copy(alpha = 0.3f) else Color.Transparent),
     ) {
         Text(
             text = text,
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+            modifier = Modifier.padding(horizontal = 18.dp, vertical = 10.dp),
             color = color,
-            style = MaterialTheme.typography.labelMedium,
+            style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.SemiBold,
         )
     }
@@ -230,25 +237,37 @@ private fun DocTopicCard(
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        color = LukoaColors.SurfaceAlt,
-        shape = RoundedCornerShape(8.dp),
-        border = BorderStroke(1.dp, LukoaColors.Line),
+        color = LukoaColors.SurfaceAlt.copy(alpha = 0.3f),
+        shape = RoundedCornerShape(16.dp),
     ) {
-        Column(
-            modifier = Modifier.padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
+        Row(
+            modifier = Modifier.padding(16.dp),
         ) {
-            Text(
-                text = title,
-                color = accentColor,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
+            Box(
+                modifier = Modifier
+                    .padding(top = 4.dp)
+                    .width(4.dp)
+                    .height(18.dp)
+                    .background(accentColor, RoundedCornerShape(2.dp))
             )
-            Text(
-                text = body,
-                color = LukoaColors.Text,
-                style = MaterialTheme.typography.bodySmall,
-            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Text(
+                    text = title,
+                    color = LukoaColors.Text,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                )
+                Text(
+                    text = body,
+                    color = LukoaColors.Muted,
+                    style = MaterialTheme.typography.bodyMedium,
+                    lineHeight = 22.sp
+                )
+            }
         }
     }
 }

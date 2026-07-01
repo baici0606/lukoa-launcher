@@ -180,6 +180,7 @@ class MainActivity : ComponentActivity() {
                             resetCountdown = resetCountdown,
                         )
                     },
+                    onPersistAutoBackupConfig = stateStore::saveAutoBackupConfig,
                     onOpenLauncherPermissionSettings = ::openLauncherPermissionSettings,
                     onOpenAllFilesAccessSettings = ::openAllFilesAccessSettings,
                     onOpenUnknownAppSourcesSettings = ::openUnknownAppSourcesSettings,

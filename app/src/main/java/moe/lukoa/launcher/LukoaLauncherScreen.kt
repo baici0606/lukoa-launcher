@@ -82,6 +82,7 @@ fun LukoaLauncherScreen(
     onCheckAllFilesAccessPermission: () -> Boolean,
     onCheckInstallUnknownAppsPermission: () -> Boolean,
     onConfigureAutoBackupSchedule: (Boolean, Int, Boolean) -> Unit,
+    onPersistAutoBackupConfig: (Boolean, Int, Int) -> Unit,
     onOpenLauncherPermissionSettings: () -> Boolean,
     onOpenAllFilesAccessSettings: () -> Boolean,
     onOpenUnknownAppSourcesSettings: () -> Boolean,
@@ -185,6 +186,8 @@ fun LukoaLauncherScreen(
     var logRefreshInFlight by remember { mutableStateOf(false) }
     var termuxBootstrapCompleted by remember { mutableStateOf(false) }
     var stopConfirmActive by remember { mutableStateOf(false) }
+    var stopConfirmToken by remember { mutableIntStateOf(0) }
+    var stopConfirmExpiresAtMs by remember { mutableLongStateOf(0L) }
     var updateConfirmActive by remember { mutableStateOf(false) }
     var rollbackConfirmActive by remember { mutableStateOf(false) }
     var showExportDialog by remember { mutableStateOf(false) }
@@ -305,11 +308,7 @@ fun LukoaLauncherScreen(
     }
 
     fun maybePromptTavernDirectoryChoice(text: String) {
-        val candidates = TavernDirectoryCandidateParser.parse(text)
-        if (candidates.size <= 1) return
-        if (showTavernDirectoryChoiceDialog && tavernDirectoryCandidates == candidates) return
-        tavernDirectoryCandidates = candidates
-        showTavernDirectoryChoiceDialog = true
+        if (text.isBlank()) return
     }
 
     fun dismissTavernDirectoryChoiceDialog() {
@@ -390,20 +389,7 @@ fun LukoaLauncherScreen(
         }
     }
 
-    fun adoptDetectedTavernPath(directory: String) {
-        val normalized = TavernPathNormalizer.normalize(directory)
-        if (normalized.isBlank()) return
-        if (normalized.equals(tavernPathConfig.normalizedTavernDir, ignoreCase = true)) return
-        val result = onSaveTavernPathConfig(TavernPathConfig(tavernDir = normalized))
-        if (!result.saved) return
-        tavernPathConfig = result.config
-        tavernPathInput = result.config.displayTavernDir
-    }
-
     fun applyTavernVersionInfo(parsed: TavernVersionInfo) {
-        if (parsed.hasData && !parsed.notInstalled && parsed.directory.isNotBlank()) {
-            adoptDetectedTavernPath(parsed.directory)
-        }
         tavernVersionInfo = parsed
         tavernInstallDetected = parsed.hasData && !parsed.notInstalled
         selectedTavernVersion = normalizeTavernVersionSelection(
@@ -912,6 +898,11 @@ fun LukoaLauncherScreen(
         autoBackupEnabled = enabled
         autoBackupIntervalMinutes = safeIntervalMinutes
         autoBackupKeepCount = keepCount.coerceIn(1, 50)
+        onPersistAutoBackupConfig(
+            enabled,
+            safeIntervalMinutes,
+            keepCount.coerceIn(1, 50),
+        )
         onConfigureAutoBackupSchedule(enabled, safeIntervalMinutes, resetCountdown)
         if (message != null) {
             update(message, "", true, allowRunningInference = false)
@@ -2069,22 +2060,32 @@ fun LukoaLauncherScreen(
 
     fun requestStopTavern() {
         if (actionInProgress) {
-            update("正在处理，完成后再停止酒馆。", "", false)
+            update("??????????????", "", false)
             return
         }
 
-        if (!stopConfirmActive) {
+        val now = SystemClock.elapsedRealtime()
+        val confirmStillValid = stopConfirmActive && now <= stopConfirmExpiresAtMs
+        if (!confirmStillValid) {
+            stopConfirmToken += 1
+            val token = stopConfirmToken
             stopConfirmActive = true
-            update("1 秒内再次点击停止酒馆。", "", false)
+            stopConfirmExpiresAtMs = now + 1600L
+            update("???????????", "", false)
             scope.launch {
-                delay(1000)
-                stopConfirmActive = false
+                delay(1600L)
+                if (stopConfirmToken == token) {
+                    stopConfirmActive = false
+                    stopConfirmExpiresAtMs = 0L
+                }
             }
             return
         }
 
+        stopConfirmToken += 1
         stopConfirmActive = false
-        if (!beginBusy("停止酒馆", 20000L)) return
+        stopConfirmExpiresAtMs = 0L
+        if (!beginBusy("????", 20000L)) return
         tavernStarting = false
         launchAttemptToken += 1
         onCommand("stop") { newStatus, termuxOutput, ok ->

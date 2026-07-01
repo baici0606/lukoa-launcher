@@ -52,15 +52,14 @@ fun <T> SectionSwitcherCard(
                 }
                 false
             },
-        color = LukoaColors.Surface,
-        shape = RoundedCornerShape(8.dp),
-        border = BorderStroke(1.dp, LukoaColors.Line),
+        color = LukoaColors.SurfaceAlt.copy(alpha = 0.4f),
+        shape = RoundedCornerShape(16.dp),
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(
                 text = title,
@@ -72,7 +71,7 @@ fun <T> SectionSwitcherCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 options.forEach { option ->
                     SectionSwitchChip(
@@ -103,16 +102,13 @@ private fun SectionSwitchChip(
 ) {
     Surface(
         modifier = Modifier.clickable(onClick = rememberFeedbackClick(onClick)),
-        color = if (selected) accentColor.copy(alpha = 0.14f) else LukoaColors.SurfaceAlt,
+        color = if (selected) accentColor.copy(alpha = 0.12f) else LukoaColors.SurfaceAlt.copy(alpha = 0.5f),
         shape = LukoaCapsuleShape,
-        border = BorderStroke(
-            1.dp,
-            if (selected) accentColor.copy(alpha = 0.44f) else LukoaColors.Line,
-        ),
+        border = BorderStroke(1.dp, if (selected) accentColor.copy(alpha = 0.3f) else Color.Transparent),
     ) {
         Text(
             text = text,
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+            modifier = Modifier.padding(horizontal = 18.dp, vertical = 10.dp),
             color = if (selected) accentColor else LukoaColors.Muted,
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.SemiBold,

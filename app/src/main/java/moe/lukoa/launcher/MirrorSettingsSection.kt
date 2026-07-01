@@ -278,7 +278,7 @@ private fun MirrorSummaryCard(
     Surface(
         modifier = Modifier.fillMaxWidth(),
         color = LukoaColors.SurfaceAlt,
-        shape = RoundedCornerShape(8.dp),
+        shape = RoundedCornerShape(12.dp),
         border = BorderStroke(1.dp, LukoaColors.Accent.copy(alpha = 0.34f)),
     ) {
         Column(
@@ -361,8 +361,8 @@ private fun MirrorSubsection(
     Surface(
         modifier = Modifier.fillMaxWidth(),
         color = LukoaColors.Surface.copy(alpha = 0.72f),
-        shape = RoundedCornerShape(8.dp),
-        border = BorderStroke(1.dp, LukoaColors.Line),
+        shape = RoundedCornerShape(12.dp),
+        border = BorderStroke(1.dp, LukoaColors.Line.copy(alpha = 0.4f)),
     ) {
         Column(
             modifier = Modifier.padding(12.dp),
@@ -426,7 +426,7 @@ private fun MirrorTextField(
         label = { Text(label) },
         placeholder = { Text(placeholder) },
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(8.dp),
+        shape = RoundedCornerShape(12.dp),
         colors = OutlinedTextFieldDefaults.colors(
             focusedTextColor = LukoaColors.Text,
             unfocusedTextColor = LukoaColors.Text,

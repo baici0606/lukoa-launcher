@@ -63,7 +63,7 @@ fun TavernPathSettingsDialog(
                     label = { Text("酒馆目录路径") },
                     placeholder = { Text("~/SillyTavern2") },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(8.dp),
+                    shape = RoundedCornerShape(12.dp),
                     colors = lukoaTextFieldColors(),
                 )
                 MiniInfoLine("当前预览", displayPathPreview)
@@ -150,7 +150,7 @@ fun LauncherUpdateSettingsDialog(
                     label = { Text("GitHub 仓库") },
                     placeholder = { Text("baici0606/lukoa-launcher") },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(8.dp),
+                    shape = RoundedCornerShape(12.dp),
                     colors = lukoaTextFieldColors(),
                 )
                 Row(
@@ -464,8 +464,8 @@ private fun UpdateStatusSummary(
     Surface(
         modifier = Modifier.fillMaxWidth(),
         color = LukoaColors.SurfaceAlt,
-        shape = RoundedCornerShape(8.dp),
-        border = BorderStroke(1.dp, LukoaColors.Line),
+        shape = RoundedCornerShape(12.dp),
+        border = BorderStroke(1.dp, LukoaColors.Line.copy(alpha = 0.4f)),
     ) {
         Column(
             modifier = Modifier.padding(12.dp),
@@ -532,7 +532,7 @@ private fun PermissionDetailCard(
     Surface(
         modifier = Modifier.fillMaxWidth(),
         color = LukoaColors.SurfaceAlt,
-        shape = RoundedCornerShape(8.dp),
+        shape = RoundedCornerShape(12.dp),
         border = BorderStroke(1.dp, accentColor.copy(alpha = 0.22f)),
     ) {
         Column(

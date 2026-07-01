@@ -19,13 +19,14 @@ data class TavernPathSaveResult(
 )
 
 object TavernPathDefaults {
-    const val DEFAULT_TAVERN_DIR = "\$HOME/SillyTavern"
+    const val DEFAULT_TAVERN_DIR = "~/SillyTavern"
+    const val DEFAULT_TAVERN_DIR_NORMALIZED = "\$HOME/SillyTavern"
 }
 
 object TavernPathNormalizer {
     fun normalize(value: String): String {
         val trimmed = value.trim()
-        if (trimmed.isBlank()) return TavernPathDefaults.DEFAULT_TAVERN_DIR
+        if (trimmed.isBlank()) return TavernPathDefaults.DEFAULT_TAVERN_DIR_NORMALIZED
         return when {
             trimmed.startsWith("~/") -> "\$HOME/${trimmed.removePrefix("~/")}"
             trimmed == "~" -> "\$HOME"

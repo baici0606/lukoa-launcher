@@ -82,10 +82,11 @@ fun LauncherBottomBar(
         color = LukoaColors.Surface,
     ) {
         Column {
-            HorizontalDivider(color = LukoaColors.Line)
+            HorizontalDivider(color = LukoaColors.Line.copy(alpha = 0.3f))
             NavigationBar(
                 containerColor = LukoaColors.Surface,
                 contentColor = LukoaColors.Text,
+                tonalElevation = 0.dp,
             ) {
                 LauncherTab.entries.forEach { tab ->
                     val selected = selectedTab == tab
@@ -113,7 +114,7 @@ fun LauncherBottomBar(
                         colors = NavigationBarItemDefaults.colors(
                             selectedIconColor = LukoaColors.Accent,
                             selectedTextColor = LukoaColors.Text,
-                            indicatorColor = LukoaColors.SurfaceAlt,
+                            indicatorColor = LukoaColors.AccentSoft.copy(alpha = 0.6f),
                             unselectedIconColor = LukoaColors.Muted,
                             unselectedTextColor = LukoaColors.Muted,
                         ),
@@ -134,11 +135,12 @@ fun ExportLogDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = LukoaColors.Surface,
+        shape = RoundedCornerShape(20.dp),
         titleContentColor = LukoaColors.Text,
         textContentColor = LukoaColors.Text,
         title = { Text("导出运行日志") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(
                     text = "导出包含清除后累计内容。",
                     color = LukoaColors.Muted,
@@ -184,11 +186,12 @@ fun ClearLogScopeDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = LukoaColors.Surface,
+        shape = RoundedCornerShape(20.dp),
         titleContentColor = LukoaColors.Text,
         textContentColor = LukoaColors.Text,
         title = { Text("选择清除范围") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(
                     text = "只清空这里的显示，不删酒馆文件。",
                     color = LukoaColors.Muted,
@@ -262,7 +265,7 @@ fun ClearLogDangerDialog(
                     singleLine = true,
                     label = { Text("输入“清除”继续") },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(8.dp),
+                    shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedTextColor = LukoaColors.Text,
                         unfocusedTextColor = LukoaColors.Text,
@@ -425,8 +428,8 @@ private fun SetupStepLine(number: String, text: String) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         color = LukoaColors.SurfaceAlt,
-        shape = RoundedCornerShape(8.dp),
-        border = BorderStroke(1.dp, LukoaColors.Line),
+        shape = RoundedCornerShape(12.dp),
+        border = BorderStroke(1.dp, LukoaColors.Line.copy(alpha = 0.4f)),
     ) {
         Row(
             modifier = Modifier.padding(10.dp),
@@ -516,8 +519,8 @@ fun TermuxPermissionHelpSection(
         Surface(
             modifier = Modifier.fillMaxWidth(),
             color = LukoaColors.Terminal,
-            shape = RoundedCornerShape(8.dp),
-            border = BorderStroke(1.dp, LukoaColors.Line),
+            shape = RoundedCornerShape(12.dp),
+            border = BorderStroke(1.dp, LukoaColors.Line.copy(alpha = 0.4f)),
         ) {
             Text(
                 text = commandText,
@@ -612,7 +615,7 @@ fun TavernControlSection(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(48.dp),
-            shape = RoundedCornerShape(8.dp),
+            shape = RoundedCornerShape(12.dp),
             colors = ButtonDefaults.buttonColors(
                 containerColor = if (actionInProgress) LukoaColors.SurfaceAlt else primaryColor,
                 contentColor = if (actionInProgress) LukoaColors.Muted else LukoaColors.Background,
@@ -666,8 +669,8 @@ private fun TavernControlStatusCard(
     Surface(
         modifier = Modifier.fillMaxWidth(),
         color = LukoaColors.SurfaceAlt,
-        shape = RoundedCornerShape(8.dp),
-        border = BorderStroke(1.dp, LukoaColors.Line),
+        shape = RoundedCornerShape(12.dp),
+        border = BorderStroke(1.dp, LukoaColors.Line.copy(alpha = 0.4f)),
     ) {
         Column(
             modifier = Modifier.padding(12.dp),
@@ -924,19 +927,19 @@ private fun VersionOverviewCard(
     val statusColor: Color
     when {
         tavernVersionInfo.hasLocalChanges -> {
-            statusText = "有本地改动"
+            statusText = "本地已修改"
             statusColor = LukoaColors.Danger
         }
         tavernVersionInfo.hasData -> {
-            statusText = "已读取当前版本"
+            statusText = "就绪"
             statusColor = LukoaColors.Accent
         }
         tavernVersionInfo.notInstalled -> {
-            statusText = "未安装酒馆"
+            statusText = "未安装"
             statusColor = LukoaColors.Amber
         }
         else -> {
-            statusText = "等待检测"
+            statusText = "检测中"
             statusColor = LukoaColors.Muted
         }
     }
@@ -944,13 +947,13 @@ private fun VersionOverviewCard(
     Surface(
         modifier = Modifier.fillMaxWidth(),
         color = LukoaColors.Surface,
-        shape = RoundedCornerShape(8.dp),
+        shape = RoundedCornerShape(16.dp),
     ) {
         Column(
             modifier = Modifier
-                .border(1.dp, LukoaColors.Line, RoundedCornerShape(8.dp))
-                .padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+                .border(1.dp, LukoaColors.Line.copy(alpha = 0.4f), RoundedCornerShape(16.dp))
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -958,66 +961,49 @@ private fun VersionOverviewCard(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = "版本总览",
+                    text = "版本部署",
                     color = LukoaColors.Text,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
                 )
-                Surface(
-                    color = statusColor.copy(alpha = 0.14f),
-                    shape = LukoaCapsuleShape,
-                    border = BorderStroke(1.dp, statusColor.copy(alpha = 0.38f)),
+                StatusPill(
+                    text = statusText,
+                    active = statusColor != LukoaColors.Muted,
+                    toneColor = statusColor,
+                    activeBackground = statusColor.copy(alpha = 0.15f),
+                )
+            }
+
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = LukoaColors.SurfaceAlt.copy(alpha = 0.3f),
+                shape = RoundedCornerShape(12.dp),
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
+                    VersionStatBlock(
+                        label = "当前版本",
+                        value = if (tavernVersionInfo.hasData) tavernVersionInfo.displayVersion else "未知",
+                        accentColor = if (tavernVersionInfo.hasData) LukoaColors.Text else LukoaColors.Dim,
+                        modifier = Modifier.weight(1f)
+                    )
                     Text(
-                        text = statusText,
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
-                        color = statusColor,
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.SemiBold,
+                        text = "→",
+                        color = LukoaColors.Line,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Black,
+                        modifier = Modifier.padding(horizontal = 8.dp)
+                    )
+                    VersionStatBlock(
+                        label = "目标版本",
+                        value = selectedVersion?.label ?: "未选择",
+                        accentColor = if (selectedVersion != null) LukoaColors.Accent else LukoaColors.Dim,
+                        modifier = Modifier.weight(1f)
                     )
                 }
-            }
-            Text(
-                text = if (tavernVersionInfo.hasData) {
-                    "这里先看当前安装信息，再决定更新还是回退。"
-                } else if (tavernVersionInfo.notInstalled) {
-                    "还没检测到酒馆安装，可以先读官方版本，确认后再去安装。"
-                } else {
-                    "先检测当前酒馆版本，再选目标版本会更清楚。"
-                },
-                color = LukoaColors.Muted,
-                style = MaterialTheme.typography.bodySmall,
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                VersionStatusValueCard(
-                    label = "当前版本",
-                    value = tavernVersionInfo.displayVersion,
-                    accentColor = when {
-                        tavernVersionInfo.hasData -> LukoaColors.Text
-                        tavernVersionInfo.notInstalled -> LukoaColors.Amber
-                        else -> LukoaColors.Muted
-                    },
-                    modifier = Modifier.weight(1f),
-                )
-                VersionStatusValueCard(
-                    label = "目标版本",
-                    value = selectedVersion?.label ?: "未选择",
-                    accentColor = if (selectedVersion == null) LukoaColors.Muted else LukoaColors.Accent,
-                    modifier = Modifier.weight(1f),
-                )
-                VersionStatusValueCard(
-                    label = "官方版本",
-                    value = if (officialVersions.hasData) {
-                        "${officialVersions.stable.size} 稳 / ${officialVersions.test.size} 测"
-                    } else {
-                        "未读取"
-                    },
-                    accentColor = if (officialVersions.hasData) LukoaColors.Info else LukoaColors.Muted,
-                    modifier = Modifier.weight(1f),
-                )
             }
             SecondaryActionButton(
                 text = "重新检测酒馆版本",
@@ -1077,8 +1063,8 @@ private fun VersionOperationStatusCard(
     Surface(
         modifier = Modifier.fillMaxWidth(),
         color = LukoaColors.SurfaceAlt,
-        shape = RoundedCornerShape(8.dp),
-        border = BorderStroke(1.dp, LukoaColors.Line),
+        shape = RoundedCornerShape(12.dp),
+        border = BorderStroke(1.dp, LukoaColors.Line.copy(alpha = 0.4f)),
     ) {
         Column(
             modifier = Modifier.padding(12.dp),
@@ -1178,6 +1164,36 @@ private fun VersionOperationStatusCard(
 }
 
 @Composable
+private fun VersionStatBlock(
+    label: String,
+    value: String,
+    accentColor: Color,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Text(
+            text = label,
+            color = LukoaColors.Muted,
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.SemiBold,
+        )
+        Text(
+            text = value,
+            color = accentColor,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+        )
+    }
+}
+
+@Composable
 private fun VersionStatusValueCard(
     label: String,
     value: String,
@@ -1221,8 +1237,8 @@ private fun VersionSelectionNotice(
     Surface(
         modifier = Modifier.fillMaxWidth(),
         color = LukoaColors.SurfaceAlt,
-        shape = RoundedCornerShape(8.dp),
-        border = BorderStroke(1.dp, LukoaColors.Line),
+        shape = RoundedCornerShape(12.dp),
+        border = BorderStroke(1.dp, LukoaColors.Line.copy(alpha = 0.4f)),
     ) {
         Column(
             modifier = Modifier.padding(10.dp),
@@ -1663,7 +1679,7 @@ fun ManualBackupConfirmDialog(
                     label = { Text("备份名称，可留空") },
                     placeholder = { Text("例如：更新前、插件测试前") },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(8.dp),
+                    shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedTextColor = LukoaColors.Text,
                         unfocusedTextColor = LukoaColors.Text,
@@ -1775,8 +1791,8 @@ private fun AutoBackupIntervalPanel(
     Surface(
         modifier = Modifier.fillMaxWidth(),
         color = LukoaColors.SurfaceAlt,
-        shape = RoundedCornerShape(8.dp),
-        border = BorderStroke(1.dp, LukoaColors.Line),
+        shape = RoundedCornerShape(12.dp),
+        border = BorderStroke(1.dp, LukoaColors.Line.copy(alpha = 0.4f)),
     ) {
         Column(
             modifier = Modifier.padding(12.dp),
@@ -1824,8 +1840,8 @@ private fun AutoBackupKeepPanel(
     Surface(
         modifier = Modifier.fillMaxWidth(),
         color = LukoaColors.SurfaceAlt,
-        shape = RoundedCornerShape(8.dp),
-        border = BorderStroke(1.dp, LukoaColors.Line),
+        shape = RoundedCornerShape(12.dp),
+        border = BorderStroke(1.dp, LukoaColors.Line.copy(alpha = 0.4f)),
     ) {
         Column(
             modifier = Modifier.padding(12.dp),
@@ -1907,7 +1923,7 @@ fun ApplyBackupPathDialog(
                     label = { Text("备份文件完整路径") },
                     placeholder = { Text("/storage/emulated/0/Download/lukoa/backups/sd/xxx.tar.gz") },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(8.dp),
+                    shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedTextColor = LukoaColors.Text,
                         unfocusedTextColor = LukoaColors.Text,
@@ -1979,8 +1995,8 @@ fun ApplyBackupPreviewDialog(
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     color = LukoaColors.SurfaceAlt,
-                    shape = RoundedCornerShape(8.dp),
-                    border = BorderStroke(1.dp, LukoaColors.Line),
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(1.dp, LukoaColors.Line.copy(alpha = 0.4f)),
                 ) {
                     Text(
                         text = archivePath,
@@ -2037,8 +2053,8 @@ fun TermuxStoragePermissionDialog(
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
                         color = LukoaColors.SurfaceAlt,
-                        shape = RoundedCornerShape(8.dp),
-                        border = BorderStroke(1.dp, LukoaColors.Line),
+                        shape = RoundedCornerShape(12.dp),
+                        border = BorderStroke(1.dp, LukoaColors.Line.copy(alpha = 0.4f)),
                     ) {
                         Text(
                             text = archivePath,
@@ -2190,7 +2206,7 @@ fun ImportBackupDialog(
                     label = { Text("备份文件完整路径") },
                     placeholder = { Text("\$HOME/storage/downloads/xxx.tar.gz") },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(8.dp),
+                    shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedTextColor = LukoaColors.Text,
                         unfocusedTextColor = LukoaColors.Text,
@@ -2295,7 +2311,7 @@ fun SettingsSection(
     ).count { it }
     val permissionSummaryText = "$permissionReadyCount/5 已就绪"
     val permissionSummaryColor = if (permissionReadyCount >= 4) LukoaColors.Accent else LukoaColors.Amber
-    val pathIsDefault = tavernPathConfig.normalizedTavernDir == TavernPathDefaults.DEFAULT_TAVERN_DIR
+    val pathIsDefault = tavernPathConfig.normalizedTavernDir == TavernPathDefaults.DEFAULT_TAVERN_DIR_NORMALIZED
     var showPathSettingsDialog by remember { mutableStateOf(false) }
     var showPermissionCenterDialog by remember { mutableStateOf(false) }
     var showUpdateSettingsDialog by remember { mutableStateOf(false) }
@@ -2668,6 +2684,33 @@ fun SettingsSection(
 }
 
 @Composable
+private fun SettingsStatBlock(
+    label: String,
+    value: String,
+    accentColor: Color,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier.padding(vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        Text(
+            text = label,
+            color = LukoaColors.Muted,
+            style = MaterialTheme.typography.labelSmall,
+        )
+        Text(
+            text = value,
+            color = accentColor,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+@Composable
 private fun SettingsOverviewCard(
     tavernPathConfig: TavernPathConfig,
     mirrorProbeStatus: TavernMirrorProbeStatus,
@@ -2692,37 +2735,38 @@ private fun SettingsOverviewCard(
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        color = LukoaColors.Surface,
-        shape = RoundedCornerShape(8.dp),
+        color = LukoaColors.SurfaceAlt.copy(alpha = 0.3f),
+        shape = RoundedCornerShape(16.dp),
     ) {
         Column(
             modifier = Modifier
-                .border(1.dp, LukoaColors.Line, RoundedCornerShape(8.dp))
-                .padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+                .border(1.dp, LukoaColors.Line.copy(alpha = 0.4f), RoundedCornerShape(16.dp))
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            Text(
-                text = "设置总览",
-                color = LukoaColors.Text,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Text(
-                text = "这里主要管路径、网络、权限和启动器更新。",
-                color = LukoaColors.Muted,
-                style = MaterialTheme.typography.bodySmall,
-            )
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                VersionStatusValueCard(
+                Text(
+                    text = "系统与状态概览",
+                    color = LukoaColors.Text,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                SettingsStatBlock(
                     label = "酒馆目录",
                     value = tavernPathConfig.displayTavernDir,
                     accentColor = LukoaColors.Text,
                     modifier = Modifier.weight(1f),
                 )
-                VersionStatusValueCard(
+                SettingsStatBlock(
                     label = "镜像状态",
                     value = mirrorProbeStatus.overallLevel.label(),
                     accentColor = mirrorProbeStatus.overallLevel.toneColor(),
@@ -2731,15 +2775,15 @@ private fun SettingsOverviewCard(
             }
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                VersionStatusValueCard(
+                SettingsStatBlock(
                     label = "权限状态",
                     value = permissionSummaryText,
                     accentColor = permissionSummaryColor,
                     modifier = Modifier.weight(1f),
                 )
-                VersionStatusValueCard(
+                SettingsStatBlock(
                     label = "启动器更新",
                     value = updateStatusText,
                     accentColor = updateStatusColor,
@@ -2780,8 +2824,8 @@ fun UpdateAvailableDialog(
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Surface(
                     color = LukoaColors.SurfaceAlt,
-                    shape = RoundedCornerShape(8.dp),
-                    border = BorderStroke(1.dp, LukoaColors.Line),
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(1.dp, LukoaColors.Line.copy(alpha = 0.4f)),
                 ) {
                     Column(
                         modifier = Modifier.padding(12.dp),
@@ -2821,8 +2865,8 @@ fun UpdateAvailableDialog(
                 )
                 Surface(
                     color = LukoaColors.SurfaceAlt,
-                    shape = RoundedCornerShape(8.dp),
-                    border = BorderStroke(1.dp, LukoaColors.Line),
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(1.dp, LukoaColors.Line.copy(alpha = 0.4f)),
                 ) {
                     Text(
                         text = updateInfo.body.ifBlank { "这个版本没有填写更新说明。" },
@@ -2837,8 +2881,8 @@ fun UpdateAvailableDialog(
                 }
                 Surface(
                     color = LukoaColors.SurfaceAlt,
-                    shape = RoundedCornerShape(8.dp),
-                    border = BorderStroke(1.dp, LukoaColors.Line),
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(1.dp, LukoaColors.Line.copy(alpha = 0.4f)),
                 ) {
                     Text(
                         text = "清除红点后，这个版本不会再自动弹出提醒，但你之后仍然可以手动点右上角版本查看。",
@@ -2923,8 +2967,8 @@ private fun GithubUpdateStatusCard(
     Surface(
         modifier = Modifier.fillMaxWidth(),
         color = LukoaColors.SurfaceAlt,
-        shape = RoundedCornerShape(8.dp),
-        border = BorderStroke(1.dp, LukoaColors.Line),
+        shape = RoundedCornerShape(12.dp),
+        border = BorderStroke(1.dp, LukoaColors.Line.copy(alpha = 0.4f)),
     ) {
         Column(
             modifier = Modifier.padding(12.dp),
@@ -3010,8 +3054,8 @@ fun InstallRiskConfirmDialog(
                 )
                 Surface(
                     color = LukoaColors.SurfaceAlt,
-                    shape = RoundedCornerShape(8.dp),
-                    border = BorderStroke(1.dp, LukoaColors.Line),
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(1.dp, LukoaColors.Line.copy(alpha = 0.4f)),
                 ) {
                     Column(
                         modifier = Modifier
@@ -3078,8 +3122,8 @@ fun TavernDirectoryChoiceDialog(
                 )
                 Surface(
                     color = LukoaColors.SurfaceAlt,
-                    shape = RoundedCornerShape(8.dp),
-                    border = BorderStroke(1.dp, LukoaColors.Line),
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(1.dp, LukoaColors.Line.copy(alpha = 0.4f)),
                 ) {
                     Column(
                         modifier = Modifier

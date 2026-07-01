@@ -163,7 +163,7 @@ fun QuickStartGuideSection(
         Surface(
             modifier = Modifier.fillMaxWidth(),
             color = LukoaColors.AccentSoft.copy(alpha = 0.72f),
-            shape = RoundedCornerShape(8.dp),
+            shape = RoundedCornerShape(12.dp),
             border = BorderStroke(1.dp, current.tone.copy(alpha = 0.58f)),
         ) {
             Column(
@@ -329,7 +329,7 @@ private fun WizardStepChip(
     Surface(
         modifier = modifier.heightIn(min = 46.dp),
         color = background,
-        shape = RoundedCornerShape(8.dp),
+        shape = RoundedCornerShape(12.dp),
         border = BorderStroke(1.dp, if (done || current) tone.copy(alpha = 0.5f) else LukoaColors.Line),
     ) {
         Column(
@@ -361,8 +361,8 @@ private fun CommandSnippet(text: String) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         color = LukoaColors.Terminal,
-        shape = RoundedCornerShape(8.dp),
-        border = BorderStroke(1.dp, LukoaColors.Line),
+        shape = RoundedCornerShape(12.dp),
+        border = BorderStroke(1.dp, LukoaColors.Line.copy(alpha = 0.4f)),
     ) {
         Column(
             modifier = Modifier.padding(10.dp),
@@ -407,8 +407,8 @@ private fun WizardVersionPicker(
     Surface(
         modifier = Modifier.fillMaxWidth(),
         color = LukoaColors.SurfaceAlt,
-        shape = RoundedCornerShape(8.dp),
-        border = BorderStroke(1.dp, LukoaColors.Line),
+        shape = RoundedCornerShape(12.dp),
+        border = BorderStroke(1.dp, LukoaColors.Line.copy(alpha = 0.4f)),
     ) {
         Column(
             modifier = Modifier.padding(10.dp),

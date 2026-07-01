@@ -111,14 +111,14 @@ fun Header(
             }
             Surface(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
+                    .clip(RoundedCornerShape(12.dp))
                     .clickable(onClick = feedbackVersionClick),
                 color = if (showVersionUpdateBadge) {
                     LukoaColors.DangerSoft.copy(alpha = 0.55f)
                 } else {
                     LukoaColors.SurfaceAlt
                 },
-                shape = RoundedCornerShape(8.dp),
+                shape = RoundedCornerShape(12.dp),
                 border = BorderStroke(
                     1.dp,
                     if (showVersionUpdateBadge) {
@@ -185,13 +185,13 @@ fun OverviewPanel(
     Surface(
         modifier = Modifier.fillMaxWidth(),
         color = LukoaColors.Surface,
-        shape = RoundedCornerShape(8.dp),
+        shape = RoundedCornerShape(16.dp),
     ) {
         Column(
             modifier = Modifier
-                .border(1.dp, accentColor.copy(alpha = 0.32f), RoundedCornerShape(8.dp))
-                .padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+                .border(1.dp, accentColor.copy(alpha = 0.2f), RoundedCornerShape(16.dp))
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -274,15 +274,15 @@ fun SectionPanel(
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        color = LukoaColors.Surface,
-        shape = RoundedCornerShape(8.dp),
+        color = LukoaColors.SurfaceAlt.copy(alpha = 0.2f),
+        shape = RoundedCornerShape(16.dp),
         tonalElevation = 0.dp,
     ) {
         Column(
             modifier = Modifier
-                .border(1.dp, LukoaColors.Line, RoundedCornerShape(8.dp))
-                .padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+                .border(1.dp, LukoaColors.Line.copy(alpha = 0.4f), RoundedCornerShape(16.dp))
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -317,14 +317,14 @@ fun SummaryPanel(summary: String, ok: Boolean) {
     val background = if (ok) LukoaColors.AccentSoft else LukoaColors.AmberSoft
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        color = background,
-        shape = RoundedCornerShape(8.dp),
+        color = background.copy(alpha = 0.6f),
+        shape = RoundedCornerShape(16.dp),
     ) {
         Column(
             modifier = Modifier
-                .border(1.dp, accentColor.copy(alpha = 0.55f), RoundedCornerShape(8.dp))
-                .padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+                .border(1.dp, accentColor.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Text(
                 text = "状态摘要",
@@ -348,9 +348,9 @@ fun StatusPanel(status: String, verified: Boolean) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .background(LukoaColors.SurfaceAlt, RoundedCornerShape(8.dp))
-            .border(1.dp, LukoaColors.Line, RoundedCornerShape(8.dp))
-            .padding(14.dp),
+            .background(LukoaColors.SurfaceAlt.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+            .border(1.dp, LukoaColors.Line.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
+            .padding(16.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
@@ -429,13 +429,13 @@ fun LogPanel(
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        color = LukoaColors.Surface,
-        shape = RoundedCornerShape(8.dp),
+        color = LukoaColors.SurfaceAlt.copy(alpha = 0.3f),
+        shape = RoundedCornerShape(16.dp),
     ) {
         Column(
             modifier = Modifier
-                .border(1.dp, LukoaColors.Line, RoundedCornerShape(8.dp))
-                .padding(14.dp),
+                .border(1.dp, LukoaColors.Line.copy(alpha = 0.4f), RoundedCornerShape(16.dp))
+                .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Row(
@@ -472,8 +472,8 @@ fun LogPanel(
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(min = 220.dp, max = 430.dp)
-                    .background(LukoaColors.Terminal, RoundedCornerShape(8.dp))
-                    .border(1.dp, accentColor.copy(alpha = 0.28f), RoundedCornerShape(8.dp)),
+                    .background(LukoaColors.Terminal, RoundedCornerShape(12.dp))
+                    .border(1.dp, accentColor.copy(alpha = 0.15f), RoundedCornerShape(12.dp)),
             ) {
                 Box(
                     modifier = Modifier
@@ -527,7 +527,7 @@ private fun ReturnToLatestChip(
             .clickable(onClick = feedbackClick),
         color = LukoaColors.Background.copy(alpha = 0.94f),
         shape = LukoaCapsuleShape,
-        border = androidx.compose.foundation.BorderStroke(1.dp, LukoaColors.Line),
+        border = androidx.compose.foundation.BorderStroke(1.dp, LukoaColors.Line.copy(alpha = 0.4f)),
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),

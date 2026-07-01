@@ -1,12 +1,16 @@
 package moe.lukoa.launcher
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
@@ -19,6 +23,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -103,7 +108,7 @@ fun BackupSection(
         )
     }
 
-    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         BackupOverviewCard(
             autoBackupEnabled = autoBackupEnabled,
             autoBackupIntervalMinutes = autoBackupIntervalMinutes,
@@ -137,7 +142,7 @@ fun BackupSection(
                 )
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     SecondaryActionButton(
                         text = "生成备份",
@@ -156,7 +161,7 @@ fun BackupSection(
                 }
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     SecondaryActionButton(
                         text = if (backupListRefreshing) "刷新中..." else "刷新列表",
@@ -179,12 +184,12 @@ fun BackupSection(
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     color = if (autoBackupEnabled) LukoaColors.AccentSoft else LukoaColors.SurfaceAlt,
-                    shape = RoundedCornerShape(8.dp),
+                    shape = RoundedCornerShape(12.dp),
                     border = BorderStroke(1.dp, if (autoBackupEnabled) LukoaColors.Accent.copy(alpha = 0.45f) else LukoaColors.Line),
                 ) {
                     Column(
-                        modifier = Modifier.padding(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         Text(
                             text = if (autoBackupEnabled) "自动备份已开启" else "自动备份未开启",
@@ -205,7 +210,7 @@ fun BackupSection(
                 }
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     SecondaryActionButton(
                         text = if (autoBackupEnabled) "关闭自动备份" else "开启自动备份",
@@ -288,53 +293,55 @@ private fun BackupOverviewCard(
     Surface(
         modifier = Modifier.fillMaxWidth(),
         color = LukoaColors.Surface,
-        shape = RoundedCornerShape(8.dp),
+        shape = RoundedCornerShape(16.dp),
     ) {
         Column(
             modifier = Modifier
-                .border(1.dp, LukoaColors.Line, RoundedCornerShape(8.dp))
-                .padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+                .border(1.dp, LukoaColors.Line.copy(alpha = 0.4f), RoundedCornerShape(16.dp))
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            Text(
-                text = "备份总览",
-                color = LukoaColors.Text,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Text(
-                text = if (autoBackupEnabled) {
-                    "自动备份已开启，每 ${formatBackupInterval(autoBackupIntervalMinutes)} 一次。"
-                } else {
-                    "自动备份未开启，当前以手动备份为主。"
-                },
-                color = LukoaColors.Muted,
-                style = MaterialTheme.typography.bodySmall,
-            )
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                BackupSummaryCard(
-                    label = "手动备份",
+                Text(
+                    text = "数据备份",
+                    color = LukoaColors.Text,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                )
+                StatusPill(
+                    text = if (autoBackupEnabled) "自动备份 · ${formatBackupInterval(autoBackupIntervalMinutes)}" else "手动模式",
+                    active = autoBackupEnabled,
+                    toneColor = if (autoBackupEnabled) LukoaColors.Accent else LukoaColors.Muted,
+                    activeBackground = if (autoBackupEnabled) LukoaColors.AccentSoft else LukoaColors.SurfaceAlt,
+                )
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+            ) {
+                BackupStatBlock(
                     value = manualBackupCount.toString(),
-                    hint = "sd 备份库",
+                    label = "手动备份 (sd)",
                     accentColor = LukoaColors.Accent,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f)
                 )
-                BackupSummaryCard(
-                    label = "自动备份",
+                Box(modifier = Modifier.width(1.dp).height(40.dp).background(LukoaColors.Line.copy(alpha = 0.4f)).align(Alignment.CenterVertically))
+                BackupStatBlock(
                     value = autoBackupCount.toString(),
-                    hint = "zd 备份库",
-                    accentColor = if (autoBackupEnabled) LukoaColors.Accent else LukoaColors.Muted,
-                    modifier = Modifier.weight(1f),
+                    label = "自动备份 (zd)",
+                    accentColor = if (autoBackupEnabled) LukoaColors.Accent else LukoaColors.Dim,
+                    modifier = Modifier.weight(1f)
                 )
-                BackupSummaryCard(
-                    label = "保留数量",
+                Box(modifier = Modifier.width(1.dp).height(40.dp).background(LukoaColors.Line.copy(alpha = 0.4f)).align(Alignment.CenterVertically))
+                BackupStatBlock(
                     value = autoBackupKeepCount.toString(),
-                    hint = "自动备份上限",
-                    accentColor = if (autoBackupEnabled) LukoaColors.Info else LukoaColors.Muted,
-                    modifier = Modifier.weight(1f),
+                    label = "自动保留上限",
+                    accentColor = if (autoBackupEnabled) LukoaColors.Info else LukoaColors.Dim,
+                    modifier = Modifier.weight(1f)
                 )
             }
         }
@@ -342,47 +349,29 @@ private fun BackupOverviewCard(
 }
 
 @Composable
-private fun BackupSummaryCard(
-    label: String,
+private fun BackupStatBlock(
     value: String,
-    hint: String,
+    label: String,
     accentColor: Color,
-    modifier: Modifier = Modifier,
+    modifier: Modifier = Modifier
 ) {
-    Surface(
+    Column(
         modifier = modifier,
-        color = LukoaColors.SurfaceAlt,
-        shape = RoundedCornerShape(8.dp),
-        border = BorderStroke(1.dp, LukoaColors.Line),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(10.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            Text(
-                text = label,
-                color = LukoaColors.Muted,
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Text(
-                text = value,
-                color = accentColor,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Text(
-                text = hint,
-                color = LukoaColors.Muted,
-                style = MaterialTheme.typography.bodySmall,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
+        Text(
+            text = value,
+            color = accentColor,
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Black,
+        )
+        Text(
+            text = label,
+            color = LukoaColors.Muted,
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.SemiBold,
+        )
     }
 }
 
@@ -457,8 +446,8 @@ private fun BackupLibraryGroup(
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 color = LukoaColors.SurfaceAlt,
-                shape = RoundedCornerShape(8.dp),
-                border = BorderStroke(1.dp, LukoaColors.Line),
+                shape = RoundedCornerShape(12.dp),
+                border = BorderStroke(1.dp, LukoaColors.Line.copy(alpha = 0.4f)),
             ) {
                 Text(
                     text = emptyText,
@@ -503,7 +492,7 @@ private fun BackupContentInfoDialog(onDismiss: () -> Unit) {
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     color = LukoaColors.InfoSoft,
-                    shape = RoundedCornerShape(8.dp),
+                    shape = RoundedCornerShape(12.dp),
                     border = BorderStroke(1.dp, LukoaColors.Info.copy(alpha = 0.34f)),
                 ) {
                     Text(
@@ -551,8 +540,8 @@ private fun BackupRecordLine(
     val fileName = path.substringAfterLast('/')
     Surface(
         color = LukoaColors.SurfaceAlt,
-        shape = RoundedCornerShape(8.dp),
-        border = BorderStroke(1.dp, LukoaColors.Line),
+        shape = RoundedCornerShape(12.dp),
+        border = BorderStroke(1.dp, LukoaColors.Line.copy(alpha = 0.4f)),
     ) {
         Column(
             modifier = Modifier
@@ -768,7 +757,7 @@ fun RenameBackupDialog(
                     label = { Text("新名称，不需要写 .tar.gz") },
                     placeholder = { Text("例如：更新前-稳定版") },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(8.dp),
+                    shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedTextColor = LukoaColors.Text,
                         unfocusedTextColor = LukoaColors.Text,
