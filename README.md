@@ -81,10 +81,11 @@ powershell -ExecutionPolicy Bypass -File .\publish-github-release.ps1 -VersionNa
 6. 推送分支和 tag
 7. 创建 GitHub Release 并上传 APK
 
-## 注意
+## 许可证
 
-- 这个项目仓库现在是公开的，但当前还没有附带正式开源许可证
-- 如果你要让别人按标准开源协议使用、修改、分发这份代码，后续还需要补 `LICENSE`
+本项目使用 `MIT License`。
+
+这意味着别人可以在保留原作者版权和许可证文本的前提下，自由使用、修改、商用和分发这份代码。
 
 ## 仓库地址
 
