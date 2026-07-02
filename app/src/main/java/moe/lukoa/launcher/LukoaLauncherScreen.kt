@@ -2060,7 +2060,7 @@ fun LukoaLauncherScreen(
 
     fun requestStopTavern() {
         if (actionInProgress) {
-            update("??????????????", "", false)
+            update("正在处理，稍后再停止酒馆。", "", false)
             return
         }
 
@@ -2071,7 +2071,7 @@ fun LukoaLauncherScreen(
             val token = stopConfirmToken
             stopConfirmActive = true
             stopConfirmExpiresAtMs = now + 1600L
-            update("???????????", "", false)
+            update("再按一次就会停止酒馆。", "", false)
             scope.launch {
                 delay(1600L)
                 if (stopConfirmToken == token) {
@@ -2085,7 +2085,7 @@ fun LukoaLauncherScreen(
         stopConfirmToken += 1
         stopConfirmActive = false
         stopConfirmExpiresAtMs = 0L
-        if (!beginBusy("????", 20000L)) return
+        if (!beginBusy("停止酒馆", 20000L)) return
         tavernStarting = false
         launchAttemptToken += 1
         onCommand("stop") { newStatus, termuxOutput, ok ->
