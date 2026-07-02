@@ -54,13 +54,16 @@ fun ActionTone.color(): Color = when (this) {
 }
 
 @Composable
-fun rememberFeedbackClick(onClick: () -> Unit): () -> Unit {
+fun rememberFeedbackClick(
+    onClick: () -> Unit,
+    minIntervalMs: Long = 260L,
+): () -> Unit {
     val haptic = LocalHapticFeedback.current
     var lastClickAt by remember { mutableLongStateOf(0L) }
-    return remember(onClick, haptic) {
+    return remember(onClick, haptic, minIntervalMs) {
         {
             val now = SystemClock.elapsedRealtime()
-            if (now - lastClickAt >= 260L) {
+            if (minIntervalMs <= 0L || now - lastClickAt >= minIntervalMs) {
                 lastClickAt = now
                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                 onClick()

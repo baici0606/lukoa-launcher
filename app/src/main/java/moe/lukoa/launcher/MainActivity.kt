@@ -107,9 +107,7 @@ class MainActivity : ComponentActivity() {
         val tavernPathStore = TavernPathStore(applicationContext)
         val tavernPathConfig = tavernPathStore.load()
         val ignoredUpdateTag = githubUpdateStore.loadIgnoredUpdateTag()
-        val shouldRunStartupRefresh = isTermuxInstalled &&
-            hasRunCommandPermission &&
-            loadResult.startupRefreshRequested
+        val shouldRunStartupRefresh = isTermuxInstalled && hasRunCommandPermission
         val startupRefreshSignal = if (shouldRunStartupRefresh) 1 else 0
         val allFilesAccessGranted = hasAllFilesAccessPermission()
         val installUnknownAppsGranted = canInstallUnknownApps()

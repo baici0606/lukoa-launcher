@@ -569,7 +569,10 @@ fun TavernControlSection(
     onExportLog: () -> Unit,
 ) {
     val wakeClick = rememberFeedbackClick(onWakeTermux)
-    val primaryClick = rememberFeedbackClick(onPrimaryAction)
+    val primaryClick = rememberFeedbackClick(
+        onClick = onPrimaryAction,
+        minIntervalMs = if (tavernRunning) 0L else 260L,
+    )
     val openTavernClick = rememberFeedbackClick(onOpenTavern)
     val exportClick = rememberFeedbackClick(onExportLog)
     val statusText = when {
