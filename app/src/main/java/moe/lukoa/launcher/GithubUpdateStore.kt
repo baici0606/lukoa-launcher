@@ -41,7 +41,11 @@ class GithubUpdateStore(private val context: Context) {
         return GithubRepositorySaveResult(
             saved = true,
             repository = normalized,
-            message = "已保存 GitHub 仓库：$normalized。",
+            message = if (normalized.isBlank()) {
+                "已清空 GitHub 仓库。启动器更新提醒已关闭。"
+            } else {
+                "已保存 GitHub 仓库：$normalized。"
+            },
         )
     }
 
@@ -60,7 +64,7 @@ class GithubUpdateStore(private val context: Context) {
 }
 
 object GithubUpdateDefaults {
-    const val REPOSITORY = "baici0606/lukoa-launcher"
+    const val REPOSITORY = ""
 }
 
 object GithubRepositoryParser {

@@ -89,4 +89,5 @@ powershell -ExecutionPolicy Bypass -File .\publish-github-release.ps1 -VersionNa
 
 ## 仓库地址
 
-- GitHub: [baici0606/lukoa-launcher](https://github.com/baici0606/lukoa-launcher)
+- 本项目不会默认绑定某个作者的 GitHub 仓库。
+- 如果你要启用启动器 APK 更新提醒，请在设置里手动填写你自己的 `用户名/仓库名`。

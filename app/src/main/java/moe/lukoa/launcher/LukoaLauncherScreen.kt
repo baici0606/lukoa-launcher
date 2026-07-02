@@ -1798,15 +1798,31 @@ fun LukoaLauncherScreen(
         ignoredUpdateTag = ""
         githubUpdateState = GithubUpdateUiState(
             repository = result.repository,
-            message = if (result.saved) "已恢复默认仓库。" else result.message,
+            message = if (result.saved) {
+                if (result.repository.isBlank()) {
+                    "已恢复默认仓库。当前未填写启动器更新仓库。"
+                } else {
+                    "已恢复默认仓库。"
+                }
+            } else {
+                result.message
+            },
         )
         update(
-            if (result.saved) "已恢复默认仓库。" else result.message,
+            if (result.saved) {
+                if (result.repository.isBlank()) {
+                    "已恢复默认仓库。当前未填写启动器更新仓库。"
+                } else {
+                    "已恢复默认仓库。"
+                }
+            } else {
+                result.message
+            },
             "",
             result.saved,
             allowRunningInference = false,
         )
-        if (result.saved) {
+        if (result.saved && result.repository.isNotBlank()) {
             checkGithubUpdate(repositoryOverride = result.repository, manual = true)
         }
     }

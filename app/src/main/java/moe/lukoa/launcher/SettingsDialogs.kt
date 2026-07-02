@@ -148,7 +148,7 @@ fun LauncherUpdateSettingsDialog(
                     enabled = !updateLocked,
                     singleLine = true,
                     label = { Text("GitHub 仓库") },
-                    placeholder = { Text("baici0606/lukoa-launcher") },
+                    placeholder = { Text("用户名/仓库名") },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
                     colors = lukoaTextFieldColors(),
